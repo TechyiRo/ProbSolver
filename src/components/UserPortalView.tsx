@@ -308,7 +308,7 @@ export default function UserPortalView({
       <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex flex-col p-6 gap-6 z-20 shrink-0">
         <div className="border-b border-white/5 pb-5 flex flex-col gap-1">
           <img
-            src="/image/Logo.png"
+            src="/image/logo.png"
             alt="ProbSolver Logo"
             className="h-8 object-contain self-start"
           />
