@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Ticket, TicketStatus } from '../types';
 import {
   Send, Sparkles, BadgeAlert, History, Smile, Paperclip,
@@ -14,6 +14,7 @@ interface TicketDetailsProps {
   onUpdateStatus: (ticketId: string, status: TicketStatus) => void;
   currentUserName?: string;
   currentUserRole?: 'admin' | 'employee' | 'user';
+  isTyping?: boolean;
 }
 
 interface ChatNote {
@@ -105,7 +106,7 @@ function FileAttachmentBubble({ name }: { name: string }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, currentUserName, currentUserRole }: TicketDetailsProps) {
+export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, currentUserName, currentUserRole, isTyping }: TicketDetailsProps) {
   // ── Chat state ──────────────────────────────────────────────────────────────
   const [replyText, setReplyText]             = useState('');
   const [isAiDrafting, setIsAiDrafting]       = useState(false);
@@ -468,6 +469,18 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
             </motion.div>
           );
         })}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="p-3 rounded-xl scale-95 origin-left bg-white/[0.04] border border-white/10 text-slate-100 rounded-tl-none flex items-center gap-1.2">
+              <span className="text-[9px] font-mono text-slate-500 mr-1.5">
+                {currentUserRole === 'user' ? 'Elena is typing' : 'Client is typing'}
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-bounce" style={{ animationDelay: '0s' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-bounce" style={{ animationDelay: '0.2s' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-bounce" style={{ animationDelay: '0.4s' }} />
+            </div>
+          </div>
+        )}
         <div ref={chatBottomRef} />
       </div>
 
@@ -544,7 +557,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
 
         {/* Note mode indicator */}
         <AnimatePresence>
-          {isNoteMode && (
+          {isNoteMode && currentUserRole === 'admin' && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-gradient-to-r ${noteColor.bg} ${noteColor.border} text-[10px]`}>
               <StickyNote className={`w-3 h-3 ${noteColor.text}`} />
@@ -572,11 +585,13 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
               className={`p-1.5 rounded-lg transition-all cursor-pointer ${showEmoji ? 'bg-amber-500/20 text-amber-300' : 'text-slate-500 hover:text-amber-300 hover:bg-white/5'}`} title="Emoji">
               <Smile className="w-4 h-4" />
             </button>
-            {/* Note mode toggle */}
-            <button onClick={() => { setIsNoteMode(!isNoteMode); setShowEmoji(false); setShowAvatarPicker(false); }}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ${isNoteMode ? 'bg-amber-500/20 text-amber-300' : 'text-slate-500 hover:text-amber-300 hover:bg-white/5'}`} title="Note mode">
-              <StickyNote className="w-4 h-4" />
-            </button>
+            {/* Note mode toggle — Admin only */}
+            {currentUserRole === 'admin' && (
+              <button onClick={() => { setIsNoteMode(!isNoteMode); setShowEmoji(false); setShowAvatarPicker(false); }}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${isNoteMode ? 'bg-amber-500/20 text-amber-300' : 'text-slate-500 hover:text-amber-300 hover:bg-white/5'}`} title="Note mode">
+                <StickyNote className="w-4 h-4" />
+              </button>
+            )}
             {/* File attach */}
             <button onClick={() => fileInputRef.current?.click()}
               className="p-1.5 rounded-lg text-slate-500 hover:text-violet-300 hover:bg-white/5 transition-all cursor-pointer" title="Attach file">

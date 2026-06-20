@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Ticket, TicketPriority, TicketStatus, Attachment, TimelineMessage } from '../types';
 import { CATEGORY_COLORS } from '../mockData';
+import TicketDetails from './TicketDetails';
 
 interface UserPortalViewProps {
   tickets: Ticket[];
@@ -1256,122 +1257,25 @@ export default function UserPortalView({
                   )}
                 </div>
 
-                {/* RIGHT CONSOLE — CHAT THREAD WITH LIVE DRIVER DYNAMICS */}
-                <div className="lg:w-5/12 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl flex flex-col justify-between max-h-[500px] h-[500px] relative overflow-hidden">
-                  
-                  {/* Subtle orbiting bubble shape in background (visual spec requirement) */}
-                  <div className="absolute top-1/4 left-1/3 w-32 h-32 bg-indigo-500/5 rounded-full filter blur-xl border border-white/5 pointer-events-none rotate-45 animate-pulse" />
-
-                  {/* Chat header */}
-                  <div className="p-4 border-b border-white/10 bg-white/[0.01] flex items-center justify-between relative z-10">
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <img
-                          src={activeSelectedTicket.assigneeAvatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120'}
-                          alt={activeSelectedTicket.assigneeName}
-                          className="w-8 h-8 rounded-full border border-indigo-400/30 object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                        <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#0f1129]" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white leading-none">
-                          {activeSelectedTicket.assigneeName !== 'Unassigned' ? activeSelectedTicket.assigneeName : 'Elena Rostova'}
-                        </h4>
-                        <span className="text-[9px] font-mono text-cyan-400 tracking-wider">IT Systems Specialist</span>
-                      </div>
-                    </div>
-
-                    <span className="text-[9px] font-mono bg-[#6C63FF]/15 text-[#A78BFA] px-2 py-0.5 rounded border border-[#6c63ff]/20 uppercase">
-                      Channel Live
-                    </span>
-                  </div>
-
-                  {/* Messages Stream container */}
-                  <div className="flex-1 p-4 overflow-y-auto space-y-4 relative z-10 bg-gradient-to-b from-transparent to-black/10" id="chat-scroller">
-                    {activeSelectedTicket.timeline.map((msg, index) => {
-                      if (msg.sender === 'system') {
-                        return (
-                          <div key={msg.id || index} className="flex justify-center my-2">
-                            <span className="px-3 py-1 rounded-full border border-white/5 bg-white/[0.02] text-[9px] font-mono text-slate-500 flex items-center gap-1 shadow-sm">
-                              <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                              {msg.text}
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      const valIsClient = msg.sender === 'client';
-                      return (
-                        <div
-                          key={msg.id || index}
-                          className={`flex ${valIsClient ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[85%] p-3 rounded-2xl text-xs space-y-1 ${
-                              valIsClient 
-                                ? 'bg-[#6C63FF] text-white rounded-tr-none shadow-md shadow-[#6c63ff]/10' 
-                                : 'bg-white/[0.04] border border-white/10 text-slate-100 rounded-tl-none'
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5 text-[9px] font-mono opacity-80">
-                              <span className="font-extrabold">{valIsClient ? 'Alexander (You)' : ' Elena Rostova'}</span>
-                              <span>•</span>
-                              <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <p className="leading-relaxed whitespace-pre-line text-[11px] font-normal">{msg.text}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Agent dynamic typing indicator (3 bouncing dots) */}
-                    {isTyping && (
-                      <div className="flex justify-start">
-                        <div className="p-3 rounded-xl scale-95 origin-left bg-white/[0.04] border border-white/10 text-slate-100 rounded-tl-none flex items-center gap-1.2">
-                          <span className="text-[9px] font-mono text-slate-500 mr-1.5">Elena is typing</span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-bounce" style={{ animationDelay: '0s' }} />
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-bounce" style={{ animationDelay: '0.2s' }} />
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-bounce" style={{ animationDelay: '0.4s' }} />
-                        </div>
-                      </div>
-                    )}
-                    <div ref={chatBottomRef} />
-                  </div>
-
-                  {/* Messaging dispatch panel */}
-                  <div className="p-3 border-t border-white/10 bg-white/[0.01] flex flex-col gap-2 relative z-10">
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="State your troubleshooting progress query..."
-                        value={chatInput}
-                        onChange={(e) => handleInputChange(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendChatText()}
-                        disabled={activeSelectedTicket.status === 'resolved'}
-                        className="flex-1 p-2.5 text-xs rounded-xl border border-white/10 bg-white/[0.02] text-white placeholder-slate-500 focus:outline-none focus:border-[#6C63FF] focus:bg-white/[0.04] transition-all disabled:opacity-50"
-                      />
-                      <button
-                        onClick={handleSendChatText}
-                        disabled={!chatInput.trim() || activeSelectedTicket.status === 'resolved'}
-                        className="p-2.5 rounded-xl bg-gradient-to-tr from-[#6C63FF] to-[#A78BFA] hover:shadow-[0_0_12px_rgba(108,99,255,0.4)] text-black font-extrabold flex items-center justify-center transition-all cursor-pointer disabled:opacity-40"
-                      >
-                        <Send className="w-4 h-4 text-white" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                      <span>Attachments validated</span>
-                      <div className="flex items-center gap-2">
-                        <button className="hover:text-white transition-colors cursor-pointer" title="Simulated Emoji Picker">
-                          <Smile className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="hover:text-white transition-colors cursor-pointer" title="Attach logs inside thread">
-                          <Paperclip className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                <div className="lg:w-5/12 max-h-[500px] h-[500px]">
+                  <TicketDetails
+                    ticket={activeSelectedTicket}
+                    onSendMessage={(ticketId, text) => {
+                      const newMsg: TimelineMessage = {
+                        id: Date.now().toString(),
+                        sender: 'client',
+                        text,
+                        timestamp: new Date().toISOString()
+                      };
+                      onAddChatMessage(ticketId, newMsg);
+                    }}
+                    onUpdateStatus={(ticketId, status) => {
+                      onUpdateTicketStatus(ticketId, status);
+                    }}
+                    currentUserName={userName}
+                    currentUserRole="user"
+                    isTyping={isTyping}
+                  />
                 </div>
               </>
             ) : (

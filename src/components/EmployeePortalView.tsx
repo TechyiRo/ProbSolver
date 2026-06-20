@@ -6,6 +6,7 @@ import {
   Download, FileCheck, HelpCircle, ArrowLeft, RefreshCw, X, ChevronRight, PlayCircle
 } from 'lucide-react';
 import { Ticket, TicketPriority, TicketStatus, TimelineMessage, Attachment } from '../types';
+import TicketDetails from './TicketDetails';
 
 interface EmployeePortalViewProps {
   tickets: Ticket[];
@@ -509,103 +510,25 @@ export default function EmployeePortalView({
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* SPLIT 2 — CHAT CLIENT MESSAGE THREAD */}
-              <div className="lg:w-6/12 bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col justify-between overflow-hidden relative">
-                
-                {/* Chat header */}
-                <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/[0.01]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 font-extrabold text-xs flex items-center justify-center border border-cyan-500/40">
-                      {activeSelectedTicket.clientName.split(' ')[0][0]}
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white">{activeSelectedTicket.clientName}</h4>
-                      <span className="text-[8.5px] font-mono text-slate-400">{activeSelectedTicket.clientEmail}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Messages scroller */}
-                <div className="flex-1 p-4 overflow-y-auto space-y-4" id="specialist-scroller">
-                  {activeSelectedTicket.timeline.map((msg, ix) => {
-                    if (msg.sender === 'system') {
-                      return (
-                        <div key={msg.id || ix} className="flex justify-center my-1.5">
-                          <span className="px-2.5 py-0.5 rounded border border-white/5 bg-white/[0.01] text-[9px] font-mono text-slate-500">
-                            {msg.text}
-                          </span>
-                        </div>
-                      );
-                    }
-
-                    const isEmpSender = msg.sender === 'agent';
-                    return (
-                      <div
-                        key={msg.id || ix}
-                        className={`flex ${isEmpSender ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[85%] p-3 rounded-2xl text-[11px] space-y-1 ${
-                            isEmpSender 
-                              ? 'bg-amber-500 text-black font-semibold rounded-tr-none' 
-                              : 'bg-white/[0.04] border border-white/10 text-slate-100 rounded-tl-none'
-                          }`}
-                        >
-                          <p className="leading-relaxed whitespace-pre-line">{msg.text}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {isClientTyping && (
-                    <div className="flex justify-start">
-                      <div className="p-3 rounded-xl scale-95 origin-left bg-white/[0.04] border border-white/10 text-slate-100 rounded-tl-none flex items-center gap-1.2">
-                        <span className="text-[9px] font-mono text-slate-500 mr-1.5">Client is typing</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-405 bg-amber-400 animate-bounce" style={{ animationDelay: '0s' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-405 bg-amber-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-405 bg-amber-400 animate-bounce" style={{ animationDelay: '0.4s' }} />
-                      </div>
-                    </div>
-                  )}
-                  <div ref={chatBottomRef} />
-                </div>
-
-                {/* Canned replies snippets selector panel (Requirement specific) */}
-                <div className="p-2 bg-black/40 border-t border-white/10 space-y-1.5">
-                  <span className="text-[8px] font-mono font-bold text-[#A78BFA] uppercase tracking-wider block pl-1">Canned Resolution Snippets</span>
-                  
-                  <div className="flex gap-1.5 overflow-x-auto pr-1 pb-1 scrollbar-thin">
-                    {quickTemplateSnippets.map((sn, snIdx) => (
-                      <button
-                        key={snIdx}
-                        onClick={() => handleAppendSnippet(sn.text)}
-                        className="p-1 px-2 mb-0.5 rounded border border-amber-500/15 bg-amber-500/5 hover:bg-amber-500/10 text-[9.5px] font-mono text-amber-300 font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0"
-                      >
-                        + {sn.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Typing Dispatchers block */}
-                <div className="p-3 border-t border-white/10 flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Enter support troubleshooting reply..."
-                    value={chatInput}
-                    onChange={(e) => handleInputChange(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendResponse()}
-                    className="flex-1 p-2 bg-white/[0.02] border border-white/10 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 rounded-lg text-xs"
-                  />
-                  <button
-                    onClick={handleSendResponse}
-                    disabled={!chatInput.trim()}
-                    className="p-2.5 rounded-lg bg-amber-505 bg-amber-400 hover:bg-amber-300 text-black font-extrabold flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <Send className="w-4 h-4 text-black" />
-                  </button>
-                </div>
+              </div>              <div className="lg:w-6/12 flex flex-col">
+                <TicketDetails
+                  ticket={activeSelectedTicket}
+                  onSendMessage={(ticketId, text) => {
+                    const newMsg: TimelineMessage = {
+                      id: Date.now().toString(),
+                      sender: 'agent',
+                      text,
+                      timestamp: new Date().toISOString()
+                    };
+                    onAddChatMessage(ticketId, newMsg);
+                  }}
+                  onUpdateStatus={(ticketId, status) => {
+                    onUpdateTicketStatus(ticketId, status);
+                  }}
+                  currentUserName={employeeName}
+                  currentUserRole="employee"
+                  isTyping={isClientTyping}
+                />
               </div>
             </>
           ) : (
