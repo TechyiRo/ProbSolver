@@ -452,7 +452,7 @@ export default function EmployeePortalView({
         </div>
 
         {/* RIGHT COLUMN: DETAILED DIAGNOSTIC SHEET + CHAT CHANNEL (xl:col-span-8) */}
-        <div className="flex-1 xl:w-8/12 flex flex-col lg:flex-row gap-6 h-[700px] min-h-[700px]">
+        <div className="flex-1 xl:w-8/12 flex flex-col lg:flex-row gap-6 h-[500px] min-h-[500px]">
           {activeSelectedTicket ? (
             <>
               {/* SPLIT 1 — DETAILED CONSOLE FILE */}

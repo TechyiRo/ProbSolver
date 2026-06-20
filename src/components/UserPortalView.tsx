@@ -1141,7 +1141,7 @@ export default function UserPortalView({
 
         {/* SUBTAB 4 — SPLIT TICKET DETAILS & ACTION CHATS (Module 2D) */}
         {activeSubTab === 'chats' && (
-          <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch min-h-[700px]">
+          <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch min-h-[500px]">
             {activeSelectedTicket ? (
               <>
                 {/* LEFT CONSOLE — TICKET DATA DETAILED SHEET */}
@@ -1259,7 +1259,7 @@ export default function UserPortalView({
                   )}
                 </div>
 
-                <div className="lg:w-5/12 max-h-[700px] h-[700px]">
+                <div className="lg:w-5/12 max-h-[500px] h-[500px]">
                   <TicketDetails
                     ticket={activeSelectedTicket}
                     onSendMessage={(ticketId, text) => {

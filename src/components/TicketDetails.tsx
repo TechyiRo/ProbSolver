@@ -133,8 +133,16 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
   const recordTimerRef  = useRef<ReturnType<typeof setInterval>|null>(null);
   const textareaRef     = useRef<HTMLTextAreaElement>(null);
 
+  const prevTicketIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!ticket) return;
+    if (prevTicketIdRef.current !== ticket.id) {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      prevTicketIdRef.current = ticket.id;
+    } else {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [ticket?.timeline, notes]);
 
   // ── Empty state ─────────────────────────────────────────────────────────────
@@ -343,7 +351,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
       </AnimatePresence>
 
       {/* ── CHAT TIMELINE ──────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-[#080918]/5 to-[#050814]/20" id="chat-thread">
+      <div className="flex-1 overflow-y-auto scroll-smooth p-4 space-y-3 bg-gradient-to-b from-[#080918]/5 to-[#050814]/20" id="chat-thread">
 
         {/* Original issue */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
