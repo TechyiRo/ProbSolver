@@ -16,6 +16,7 @@ interface EmployeePortalViewProps {
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
   onAddChatMessage: (ticketId: string, message: TimelineMessage) => void;
   onDeleteChatMessage?: (ticketId: string, messageId: string) => void;
+  onMarkSeen?: (ticketId: string, role: string) => void;
   notificationsCount: number;
   onOpenNotifications: () => void;
 }
@@ -28,6 +29,7 @@ export default function EmployeePortalView({
   onUpdateTicketStatus,
   onAddChatMessage,
   onDeleteChatMessage,
+  onMarkSeen,
   notificationsCount,
   onOpenNotifications
 }: EmployeePortalViewProps) {
@@ -528,6 +530,7 @@ export default function EmployeePortalView({
                     onUpdateTicketStatus(ticketId, status);
                   }}
                   onDeleteMessage={onDeleteChatMessage}
+                  onMarkSeen={onMarkSeen}
                   currentUserName={employeeName}
                   currentUserRole="employee"
                   isTyping={isClientTyping}

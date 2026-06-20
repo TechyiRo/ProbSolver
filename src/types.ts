@@ -8,6 +8,7 @@ export interface TimelineMessage {
   text: string;
   timestamp: string;
   attachmentName?: string;
+  seen?: boolean;
 }
 
 export interface Attachment {

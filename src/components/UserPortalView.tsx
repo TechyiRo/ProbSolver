@@ -25,6 +25,7 @@ interface UserPortalViewProps {
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
   onAddChatMessage: (ticketId: string, message: TimelineMessage) => void;
   onDeleteChatMessage?: (ticketId: string, messageId: string) => void;
+  onMarkSeen?: (ticketId: string, role: string) => void;
   notificationsCount: number;
   onOpenNotifications: () => void;
 }
@@ -40,6 +41,7 @@ export default function UserPortalView({
   onUpdateTicketStatus,
   onAddChatMessage,
   onDeleteChatMessage,
+  onMarkSeen,
   notificationsCount,
   onOpenNotifications
 }: UserPortalViewProps) {
@@ -1275,6 +1277,7 @@ export default function UserPortalView({
                       onUpdateTicketStatus(ticketId, status);
                     }}
                     onDeleteMessage={onDeleteChatMessage}
+                    onMarkSeen={onMarkSeen}
                     currentUserName={userName}
                     currentUserRole="user"
                     isTyping={isTyping}

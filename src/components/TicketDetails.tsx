@@ -16,6 +16,7 @@ interface TicketDetailsProps {
   currentUserRole?: 'admin' | 'employee' | 'user';
   isTyping?: boolean;
   onDeleteMessage?: (ticketId: string, messageId: string) => void;
+  onMarkSeen?: (ticketId: string, role: string) => void;
 }
 
 interface ChatNote {
@@ -107,7 +108,7 @@ function FileAttachmentBubble({ name }: { name: string }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, currentUserName, currentUserRole, isTyping, onDeleteMessage }: TicketDetailsProps) {
+export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, currentUserName, currentUserRole, isTyping, onDeleteMessage, onMarkSeen }: TicketDetailsProps) {
   // ── Chat state ──────────────────────────────────────────────────────────────
   const [replyText, setReplyText]             = useState('');
   const [isAiDrafting, setIsAiDrafting]       = useState(false);
@@ -178,6 +179,55 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [ticket?.id, ticket?.timeline?.length, notes?.length]);
+
+  // Load seen status on timeline changes
+  useEffect(() => {
+    if (ticket && onMarkSeen && currentUserRole) {
+      onMarkSeen(ticket.id, currentUserRole);
+    }
+  }, [ticket?.id, ticket?.timeline?.length, onMarkSeen, currentUserRole]);
+
+  // Live chat presence tracking
+  const [counterpartPresence, setCounterpartPresence] = useState({ agent: false, client: false });
+
+  useEffect(() => {
+    if (!ticket || !currentUserRole) return;
+
+    const sendPresence = async (active: boolean) => {
+      try {
+        await fetch(`/api/tickets/${ticket.id}/presence`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: currentUserRole, active })
+        });
+      } catch (err) {
+        console.error("Presence heartbeat error:", err);
+      }
+    };
+
+    sendPresence(true);
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/tickets/${ticket.id}/presence`);
+        if (res.ok) {
+          const data = await res.json();
+          setCounterpartPresence(data);
+        }
+      } catch (err) {
+        console.error("Presence polling error:", err);
+      }
+    }, 1500);
+
+    return () => {
+      clearInterval(pollInterval);
+      sendPresence(false);
+    };
+  }, [ticket?.id, currentUserRole]);
+
+  const isCounterpartOpen = currentUserRole === 'user'
+    ? counterpartPresence.agent
+    : counterpartPresence.client;
 
   // ── Empty state ─────────────────────────────────────────────────────────────
   if (!ticket) {
@@ -303,20 +353,41 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
           <span className="text-[10px] font-mono font-bold text-[#A78BFA] tracking-widest uppercase">Live Chat</span>
           <span className="text-slate-600 text-xs">·</span>
+          {isCounterpartOpen ? (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-mono font-bold text-emerald-400 uppercase tracking-wider animate-pulse">
+              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+              Chat Open
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/10 border border-white/5 text-[9px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+              <span className="w-1 h-1 rounded-full bg-slate-500" />
+              Idle
+            </span>
+          )}
+          <span className="text-slate-600 text-xs">·</span>
           <span className="text-[11px] font-mono font-bold text-cyan-400">{ticket.id}</span>
           <span className="text-slate-600 text-xs">·</span>
-          <span className="text-xs font-medium text-slate-300 truncate max-w-[130px]">{ticket.title}</span>
+          <span className="text-xs font-medium text-slate-300 truncate max-w-[100px]">{ticket.title}</span>
         </div>
-        <div className="flex items-center gap-1 bg-black/20 p-0.5 rounded-xl border border-white/5">
-          {(['open','in_progress','resolved'] as TicketStatus[]).map(st => {
-            const cfg = statusConfig[st];
-            return (
-              <button key={st} onClick={() => onUpdateStatus(ticket.id, st)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold cursor-pointer transition-all border ${ticket.status === st ? cfg.color : 'text-slate-500 border-transparent hover:text-slate-300 hover:bg-white/5'}`}>
-                {cfg.label}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          {onMarkSeen && (
+            <button onClick={() => onMarkSeen(ticket.id, currentUserRole || 'user')}
+              className="px-2 py-1 rounded-lg text-[9px] font-mono font-bold border border-cyan-500/25 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 cursor-pointer transition-all hover:scale-105"
+              title="Toggle all counterpart messages to Seen state">
+              ✓✓ Seen Toggle
+            </button>
+          )}
+          <div className="flex items-center gap-1 bg-black/20 p-0.5 rounded-xl border border-white/5">
+            {(['open','in_progress','resolved'] as TicketStatus[]).map(st => {
+              const cfg = statusConfig[st];
+              return (
+                <button key={st} onClick={() => onUpdateStatus(ticket.id, st)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold cursor-pointer transition-all border ${ticket.status === st ? cfg.color : 'text-slate-500 border-transparent hover:text-slate-300 hover:bg-white/5'}`}>
+                  {cfg.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -445,10 +516,10 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
                 <button
                   onClick={() => onDeleteMessage(ticket.id, msg.id)}
                   className="p-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-all cursor-pointer self-end mb-1 text-[9px] font-mono flex items-center gap-0.5 opacity-70 hover:opacity-100"
-                  title="Delete permanently (both sides)"
+                  title="Unsend message permanently (both sides)"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete</span>
+                  <span>Unsend</span>
                 </button>
               )}
 
@@ -456,8 +527,13 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
                 {/* Name + time row */}
                 <div className={`flex items-center gap-1.5 mb-1 px-1 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
                   <span className={`text-[10px] font-bold font-mono ${style.name}`}>{displayName}</span>
-                  <span className="text-[9px] text-slate-600 font-mono">
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
+                  <span className="text-[9px] text-slate-600 font-mono flex items-center gap-1">
+                    <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</span>
+                    {isCurrentUser && (
+                      <span className={`font-bold transition-all text-[8px] tracking-wide ${msg.seen ? 'text-emerald-400 font-extrabold' : 'text-slate-500'}`}>
+                        {msg.seen ? '✓✓ Seen' : '✓ Sent'}
+                      </span>
+                    )}
                   </span>
                 </div>
 

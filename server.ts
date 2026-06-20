@@ -47,7 +47,8 @@ const TimelineMessageSchema = new mongoose.Schema({
   id: { type: String, required: true },
   sender: { type: String, required: true, enum: ['client', 'agent', 'system'] },
   text: { type: String, required: true },
-  timestamp: { type: String, required: true }
+  timestamp: { type: String, required: true },
+  seen: { type: Boolean, default: false }
 });
 
 const TicketSchema = new mongoose.Schema({
@@ -493,6 +494,63 @@ app.delete('/api/tickets/:id/timeline/:messageId', async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// PUT /api/tickets/:id/seen
+app.put('/api/tickets/:id/seen', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    const counterpartSender = role === 'user' ? 'agent' : 'client';
+
+    if (isDbConnected) {
+      const ticket = await TicketModel.findOne({ id } as any);
+      if (!ticket) return res.status(404).json({ error: "Ticket not found" });
+      
+      ticket.timeline.forEach((msg: any) => {
+        if (msg.sender === counterpartSender) {
+          msg.seen = true;
+        }
+      });
+      await ticket.save();
+      res.json(ticket);
+    } else {
+      const idx = localMemoryTickets.findIndex(t => t.id === id);
+      if (idx === -1) return res.status(404).json({ error: "Ticket not found" });
+      localMemoryTickets[idx].timeline.forEach(msg => {
+        if (msg.sender === counterpartSender) {
+          msg.seen = true;
+        }
+      });
+      res.json(localMemoryTickets[idx]);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// In-memory presence store
+const chatPresence: Record<string, { agent: boolean; client: boolean }> = {};
+
+// POST /api/tickets/:id/presence
+app.post('/api/tickets/:id/presence', (req, res) => {
+  const { id } = req.params;
+  const { role, active } = req.body;
+  if (!chatPresence[id]) {
+    chatPresence[id] = { agent: false, client: false };
+  }
+  if (role === 'user') {
+    chatPresence[id].client = !!active;
+  } else {
+    chatPresence[id].agent = !!active;
+  }
+  res.json({ success: true, presence: chatPresence[id] });
+});
+
+// GET /api/tickets/:id/presence
+app.get('/api/tickets/:id/presence', (req, res) => {
+  const { id } = req.params;
+  res.json(chatPresence[id] || { agent: false, client: false });
 });
 
 // In-memory typing status store

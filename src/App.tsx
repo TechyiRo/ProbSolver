@@ -513,6 +513,22 @@ export default function App() {
     }
   };
 
+  const handleMarkTicketSeen = async (ticketId: string, role: string) => {
+    try {
+      const res = await fetch(`/api/tickets/${ticketId}/seen`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role })
+      });
+      if (res.ok) {
+        const updatedTicket: Ticket = await res.json();
+        setTickets(prev => prev.map(t => t.id === ticketId ? updatedTicket : t));
+      }
+    } catch (err) {
+      console.error("MongoDB sync error marking messages seen:", err);
+    }
+  };
+
   // Delete/Archive Ticket
   const handleDeleteTicket = async (ticketId: string) => {
     setTickets(prev => prev.filter(t => t.id !== ticketId));
@@ -626,6 +642,7 @@ export default function App() {
                 onUpdateTicketStatus={handleUpdateTicketStatus}
                 onAddChatMessage={handleAddChatMessage}
                 onDeleteChatMessage={handleDeleteChatMessage}
+                onMarkSeen={handleMarkTicketSeen}
                 notificationsCount={unreadNotificationsCount}
                 onOpenNotifications={() => setIsNotificationsOpen(true)}
               />
@@ -654,6 +671,7 @@ export default function App() {
                 onUpdateTicketStatus={handleUpdateTicketStatus}
                 onAddChatMessage={handleAddChatMessage}
                 onDeleteChatMessage={handleDeleteChatMessage}
+                onMarkSeen={handleMarkTicketSeen}
                 notificationsCount={unreadNotificationsCount}
                 onOpenNotifications={() => setIsNotificationsOpen(true)}
               />
