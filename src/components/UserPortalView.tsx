@@ -38,6 +38,7 @@ export default function UserPortalView({
   const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'new-ticket' | 'my-tickets' | 'chats'>('dashboard');
   const [viewLayout, setViewLayout] = useState<'list' | 'grid'>('list');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Filter queries
   const [searchQuery, setSearchQuery] = useState('');
@@ -304,8 +305,171 @@ export default function UserPortalView({
         </div>
       )}
 
+      {/* MOBILE TOP BAR (Only visible on mobile) */}
+      <header className="flex md:hidden items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.01] backdrop-blur-xl z-30 shrink-0">
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer animate-pulse"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <img
+          src="/image/logo.png"
+          alt="ProbSolver Logo"
+          className="h-7 object-contain"
+        />
+        <button
+          onClick={onOpenNotifications}
+          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer relative"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          {notificationsCount > 0 && (
+            <span className="absolute top-1 right-1 bg-rose-500 font-mono text-[8px] text-white font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center animate-pulse">
+              {notificationsCount}
+            </span>
+          )}
+        </button>
+      </header>
+
+      {/* MOBILE MENU DRAWER OVERLAY */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 w-72 bg-[#050814]/95 border-r border-white/10 backdrop-blur-2xl p-6 flex flex-col gap-6 z-50 md:hidden overflow-y-auto"
+            >
+              <div className="flex justify-between items-center border-b border-white/5 pb-5">
+                <div className="flex flex-col gap-1">
+                  <img
+                    src="/image/logo.png"
+                    alt="ProbSolver Logo"
+                    className="h-8 object-contain self-start"
+                  />
+                  <div className="flex flex-col gap-0.5 pl-1">
+                    <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono">User Console</p>
+                    <p className="text-[7.5px] text-slate-400 tracking-wider font-bold uppercase font-sans">Smarter Support. Faster Resolution.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* User Identity */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-3">
+                {userAvatar ? (
+                  <img
+                    src={userAvatar}
+                    alt={userName}
+                    className="w-10 h-10 rounded-full border border-cyan-500/30 object-cover bg-slate-900"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-sm flex items-center justify-center border border-cyan-500/40">
+                    {getInitials(userName)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-bold text-white truncate">{userName}</h4>
+                  <span className="text-[9px] font-mono bg-cyan-400/15 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-400/20 uppercase font-bold">
+                    User
+                  </span>
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <nav className="flex flex-col gap-1.5 flex-1">
+                {[
+                  { id: 'dashboard', label: 'Dashboard Overview', icon: Clock },
+                  { id: 'new-ticket', label: 'Raise New Ticket', icon: PlusCircle, highlight: true },
+                  { id: 'my-tickets', label: 'My Ingested Tickets', icon: FileText },
+                  { id: 'chats', label: 'My Live Chats', icon: MessageSquare }
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeSubTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveSubTab(item.id as any);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl text-xs font-medium cursor-pointer transition-all duration-300 ${
+                        isActive 
+                          ? 'bg-gradient-to-r from-white/[0.08] to-white/[0.02] text-white border-l-2 border-[#6C63FF] shadow-inner' 
+                          : item.highlight 
+                            ? 'text-[#A78BFA] hover:bg-white/[0.02]' 
+                            : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-4 h-4 ${isActive ? 'text-[#6C63FF]' : ''}`} />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.id === 'new-ticket' && (
+                        <span className="w-2 h-2 rounded-full bg-[#6C63FF] animate-pulse" />
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Global Notifications and Signout */}
+              <div className="mt-auto space-y-3">
+                <button
+                  onClick={() => {
+                    onOpenNotifications();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-white/[0.02] cursor-pointer transition-colors relative"
+                >
+                  <div className="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <span>Notifications</span>
+                  </div>
+                  {notificationsCount > 0 && (
+                    <span className="bg-rose-500 font-mono text-[9px] text-white font-bold h-5 px-1.5 rounded-full flex items-center justify-center animate-pulse">
+                      {notificationsCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={onLogout}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 cursor-pointer transition-colors font-semibold"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 11-6 0v-1m6-9v1a3 3 0 01-6 0V4" />
+                  </svg>
+                  <span>Exit Session</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* DASHBOARD NAVIGATION SIDEBAR */}
-      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex flex-col p-6 gap-6 z-20 shrink-0">
+      <aside className="hidden md:flex w-full md:w-64 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex-col p-6 gap-6 z-20 shrink-0">
         <div className="border-b border-white/5 pb-5 flex flex-col gap-1">
           <img
             src="/image/logo.png"

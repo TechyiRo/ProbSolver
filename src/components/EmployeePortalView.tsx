@@ -29,6 +29,7 @@ export default function EmployeePortalView({
   onOpenNotifications
 }: EmployeePortalViewProps) {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Filters & Queries
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,8 +153,147 @@ export default function EmployeePortalView({
   return (
     <div className="flex-1 flex flex-col md:flex-row min-h-screen bg-[#050814]">
       
+      {/* MOBILE TOP BAR (Only visible on mobile) */}
+      <header className="flex md:hidden items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.01] backdrop-blur-xl z-30 shrink-0">
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer animate-pulse"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <img
+          src="/image/logo.png"
+          alt="ProbSolver Logo"
+          className="h-7 object-contain"
+        />
+        <button
+          onClick={onOpenNotifications}
+          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer relative"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          {notificationsCount > 0 && (
+            <span className="absolute top-1 right-1 bg-rose-500 font-mono text-[8px] text-white font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center animate-pulse">
+              {notificationsCount}
+            </span>
+          )}
+        </button>
+      </header>
+
+      {/* MOBILE MENU DRAWER OVERLAY */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 w-72 bg-[#050814]/95 border-r border-white/10 backdrop-blur-2xl p-6 flex flex-col gap-6 z-50 md:hidden overflow-y-auto"
+            >
+              <div className="flex justify-between items-center border-b border-white/5 pb-5">
+                <div className="flex flex-col gap-1">
+                  <img
+                    src="/image/logo.png"
+                    alt="ProbSolver Logo"
+                    className="h-8 object-contain self-start"
+                  />
+                  <div className="flex flex-col gap-0.5 pl-1">
+                    <p className="text-[9px] text-amber-400 font-bold uppercase tracking-widest font-mono">Support Operator</p>
+                    <p className="text-[7.5px] text-slate-400 tracking-wider font-bold uppercase font-sans">Smarter Support. Faster Resolution.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Profile Card */}
+              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-3">
+                <img
+                  src={employeeAvatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120'}
+                  alt={employeeName}
+                  className="w-10 h-10 rounded-full border border-amber-500/30 object-cover bg-slate-900"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-bold text-white truncate">{employeeName}</h4>
+                  <span className="text-[9px] font-mono bg-amber-500/15 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/25 uppercase font-bold">
+                    Specialist Node
+                  </span>
+                </div>
+              </div>
+
+              {/* Queues load info */}
+              <div className="space-y-4">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-slate-500 font-bold">Assigned Queues</span>
+                
+                <div className="space-y-1 text-slate-400 text-xs">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5 font-medium">
+                    <span>My Load:</span>
+                    <span className="font-mono font-bold text-amber-300">{employeeAssignedTickets.length} incidents</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5 font-medium">
+                    <span>Open Queue:</span>
+                    <span className="font-mono font-bold text-rose-300">
+                      {employeeAssignedTickets.filter(t=>t.status==='open' || t.status==='in_progress').length} pending
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Exit Session and Notifications */}
+              <div className="mt-auto space-y-3 pt-4 border-t border-white/5 text-xs">
+                <button
+                  onClick={() => {
+                    onOpenNotifications();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-white/[0.02] cursor-pointer transition-colors relative"
+                >
+                  <div className="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <span>Notifications</span>
+                  </div>
+                  {notificationsCount > 0 && (
+                    <span className="bg-rose-500 font-mono text-[9px] text-white font-bold h-5 px-1.5 rounded-full flex items-center justify-center animate-pulse">
+                      {notificationsCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={onLogout}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 cursor-pointer transition-colors font-bold"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 11-6 0v-1m6-9v1a3 3 0 01-6 0V4" />
+                  </svg>
+                  <span>Exit Session</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* EMPLOYEE PORTAL NAVIGATION SIDE PANEL */}
-      <aside className="w-full md:w-60 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex flex-col p-6 gap-6 shrink-0 z-20">
+      <aside className="hidden md:flex w-full md:w-60 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex-col p-6 gap-6 shrink-0 z-20">
         <div className="border-b border-white/5 pb-5 flex flex-col gap-1">
           <img
             src="/image/logo.png"

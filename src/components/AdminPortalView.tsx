@@ -35,6 +35,7 @@ export default function AdminPortalView({
 }: AdminPortalViewProps) {
   // Navigation
   const [activeAdminSubTab, setActiveAdminSubTab] = useState<'dashboard' | 'tickets' | 'users' | 'employees'>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Multi-select bulk lists
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
@@ -376,8 +377,119 @@ export default function AdminPortalView({
   return (
     <div className="flex-1 flex flex-col md:flex-row min-h-screen bg-[#050814]">
       
+      {/* MOBILE TOP BAR (Only visible on mobile) */}
+      <header className="flex md:hidden items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.01] backdrop-blur-xl z-30 shrink-0">
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer animate-pulse"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <img
+          src="/image/logo.png"
+          alt="ProbSolver Logo"
+          className="h-7 object-contain"
+        />
+        <div className="w-9 h-9" /> {/* Spacer to center the logo */}
+      </header>
+
+      {/* MOBILE MENU DRAWER OVERLAY */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 w-72 bg-[#050814]/95 border-r border-white/10 backdrop-blur-2xl p-6 flex flex-col gap-6 z-50 md:hidden overflow-y-auto"
+            >
+              <div className="flex justify-between items-center border-b border-white/5 pb-5">
+                <div className="flex flex-col gap-1">
+                  <img
+                    src="/image/logo.png"
+                    alt="ProbSolver Logo"
+                    className="h-8 object-contain self-start"
+                  />
+                  <div className="flex flex-col gap-0.5 pl-1">
+                    <p className="text-[9px] text-[#A78BFA] font-bold uppercase tracking-widest font-mono">Platform Admin</p>
+                    <p className="text-[7.5px] text-slate-400 tracking-wider font-bold uppercase font-sans">Smarter Support. Faster Resolution.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Navigation */}
+              <nav className="flex flex-col gap-1.5 flex-1 text-xs">
+                {[
+                  { id: 'dashboard', label: 'Command Desk', icon: BarChart3 },
+                  { id: 'tickets', label: 'All Ingress Tickets', icon: Server, badge: tickets.filter(t=>t.status==='open').length },
+                  { id: 'users', label: 'User CRM Accounts', icon: Users },
+                  { id: 'employees', label: 'Workforce Roster', icon: Briefcase }
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeAdminSubTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveAdminSubTab(item.id as any);
+                        setInspectedTicketId(null);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl text-xs font-semibold cursor-pointer transition-all duration-300 ${
+                        isActive 
+                          ? 'bg-gradient-to-r from-purple-500/10 to-transparent text-white border-l-2 border-[#A78BFA] shadow-inner' 
+                          : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-4 h-4 ${isActive ? 'text-[#A78BFA]' : ''}`} />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && item.badge > 0 && (
+                        <span className="bg-rose-500 text-[10px] text-white font-bold h-4 px-1.5 rounded-full flex items-center justify-center">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Exit Platform */}
+              <div className="mt-auto space-y-3 pt-4 border-t border-white/5 text-xs">
+                <button
+                  onClick={onLogout}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 cursor-pointer transition-colors font-bold"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 11-6 0v-1m6-9v1a3 3 0 01-6 0V4" />
+                  </svg>
+                  <span>Exit Platform</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* SIDEBAR NAVIGATION CONTROL (Aether admin look) */}
-      <aside className="w-full md:w-60 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex flex-col p-6 gap-6 shrink-0 z-20">
+      <aside className="hidden md:flex w-full md:w-60 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex-col p-6 gap-6 shrink-0 z-20">
         <div className="border-b border-white/5 pb-5 flex flex-col gap-1">
           <img
             src="/image/logo.png"
