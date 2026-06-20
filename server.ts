@@ -243,6 +243,77 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// POST /api/register — Self-service user registration
+app.post('/api/register', async (req, res) => {
+  try {
+    const { name, username, email, department, password, avatar, company } = req.body;
+
+    // Validate required fields
+    if (!name || !username || !email || !department || !password) {
+      return res.status(400).json({ error: 'All required fields must be provided.' });
+    }
+    if (!company || !company.name || !company.address) {
+      return res.status(400).json({ error: 'Company name and address are mandatory.' });
+    }
+
+    const u = username.toLowerCase().trim();
+
+    // Check for username uniqueness
+    let existing = null;
+    if (isDbConnected) {
+      existing = await UserAccountModel.findOne({ username: u } as any);
+    } else {
+      existing = localMemoryUsers.find((usr: any) => usr.username === u);
+    }
+    if (existing) {
+      return res.status(409).json({ error: 'Username already taken. Please choose a different one.' });
+    }
+
+    const newId = `USR-${Date.now()}`;
+    const userData = {
+      id: newId,
+      name: name.trim(),
+      username: u,
+      email: email.trim().toLowerCase(),
+      department: department.trim(),
+      status: 'active',
+      role: 'user',
+      password: password.trim(),
+      isFirstLogin: false,
+      avatar: avatar || '',
+      company: {
+        name: company.name.trim(),
+        address: company.address.trim(),
+        logo: company.logo ? company.logo.trim() : ''
+      }
+    };
+
+    if (isDbConnected) {
+      const newUser = new UserAccountModel(userData);
+      await newUser.save();
+    } else {
+      localMemoryUsers.push(userData);
+    }
+
+    return res.status(201).json({
+      success: true,
+      user: {
+        id: userData.id,
+        name: userData.name,
+        username: userData.username,
+        email: userData.email,
+        role: userData.role,
+        isFirstLogin: false,
+        avatar: userData.avatar,
+        company: userData.company
+      }
+    });
+  } catch (err: any) {
+    console.error('Registration error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/users/:id/first-setup
 app.post('/api/users/:id/first-setup', async (req, res) => {
   try {

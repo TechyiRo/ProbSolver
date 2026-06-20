@@ -4,7 +4,7 @@ import {
   Shield, Users, Activity, CheckCircle, BarChart3, TrendingUp, 
   Settings, AlertCircle, FileText, Search, Filter, ArrowUpRight, 
   Trash2, Edit3, UserCheck, PlusCircle, Check, X, Clipboard, 
-  Clock, Server, Bell, Key, Briefcase, FileSpreadsheet, Lock, HelpCircle, Eye, RefreshCw, Building2
+  Clock, Server, Bell, Key, Briefcase, FileSpreadsheet, Lock, HelpCircle, Eye, EyeOff, RefreshCw, Building2
 } from 'lucide-react';
 import { Ticket, TicketPriority, TicketStatus, UserAccount, SystemNotification } from '../types';
 import { INITIAL_USERS, INITIAL_EMPLOYEES, CATEGORY_COLORS } from '../mockData';
@@ -109,6 +109,9 @@ export default function AdminPortalView({
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
   const [activeCompanyCard, setActiveCompanyCard] = useState<string | null>(null);
   const [resetTargetUser, setResetTargetUser] = useState<UserAccount | null>(null);
+  // Per-row password reveal toggle: key = user.id, value = boolean
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  const toggleRevealPassword = (userId: string) => setRevealedPasswords(prev => ({ ...prev, [userId]: !prev[userId] }));
 
   // Internal workspace note state
   const [internalNoteText, setInternalNoteText] = useState('');
@@ -1090,8 +1093,9 @@ export default function AdminPortalView({
                                   <th className="p-3">Operator Name</th>
                                   <th className="p-3">Username</th>
                                   <th className="p-3">Email</th>
-                                  <th className="p-3">Oversight Department</th>
-                                  <th className="p-3">Telemetry Access State</th>
+                                  <th className="p-3">Department</th>
+                                  <th className="p-3">Password</th>
+                                  <th className="p-3">Status</th>
                                   <th className="p-3 text-right">Actions</th>
                                 </tr>
                               </thead>
@@ -1108,8 +1112,29 @@ export default function AdminPortalView({
                                       <span>{user.name}</span>
                                     </td>
                                     <td className="p-3 font-mono text-cyan-400">@{user.username}</td>
-                                    <td className="p-3 text-slate-300">{user.email}</td>
+                                    <td className="p-3 text-slate-300 text-[11px] max-w-[140px] truncate" title={user.email}>{user.email}</td>
                                     <td className="p-3 text-slate-400 font-medium">{user.department}</td>
+                                    {/* Password column — visible to admin only */}
+                                    <td className="p-3">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="font-mono text-[11px] text-amber-300 tracking-wide">
+                                          {user.password
+                                            ? (revealedPasswords[user.id] ? user.password : '••••••••')
+                                            : <span className="text-slate-600 italic text-[9px]">not set</span>}
+                                        </span>
+                                        {user.password && (
+                                          <button
+                                            onClick={() => toggleRevealPassword(user.id)}
+                                            className="text-slate-500 hover:text-amber-300 transition-colors cursor-pointer"
+                                            title={revealedPasswords[user.id] ? 'Hide password' : 'Reveal password'}
+                                          >
+                                            {revealedPasswords[user.id]
+                                              ? <EyeOff className="w-3 h-3" />
+                                              : <Eye className="w-3 h-3" />}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
                                     <td className="p-3">
                                       <span className={`px-2 py-0.5 rounded-full text-[8px] font-mono font-bold ${
                                         user.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'

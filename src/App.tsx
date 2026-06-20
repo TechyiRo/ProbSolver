@@ -201,12 +201,14 @@ export default function App() {
   }, [currentUser]);
 
   // Auth logins handler
-  const handleLoginSuccess = (role: UserRole, username: string, name: string, avatar?: string, company?: any) => {
-    // Generate logical corporate email mappings
-    let email = `${username}@sandbox-sec.dev`;
-    if (username.includes('alex')) email = 'a.wright@hyperplane.io';
-    else if (username.includes('elena')) email = 'e.rostova@vrtickets.secure';
-    else if (username.includes('admin')) email = 'admin.chief@vrtickets.secure';
+  const handleLoginSuccess = (role: UserRole, username: string, name: string, avatar?: string, company?: any, realEmail?: string) => {
+    // Use the real email from API if provided, otherwise fall back to username-based mapping
+    let email = realEmail || `${username}@sandbox-sec.dev`;
+    if (!realEmail) {
+      if (username.includes('alex')) email = 'a.wright@hyperplane.io';
+      else if (username.includes('elena')) email = 'e.rostova@vrtickets.secure';
+      else if (username.includes('admin')) email = 'admin.chief@vrtickets.secure';
+    }
 
     const userObj = {
       role,
