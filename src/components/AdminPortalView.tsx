@@ -107,6 +107,7 @@ export default function AdminPortalView({
   const [editUserCompanyAddress, setEditUserCompanyAddress] = useState('');
   const [editUserCompanyLogo, setEditUserCompanyLogo] = useState('');
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
+  const [activeCompanyCard, setActiveCompanyCard] = useState<string | null>(null);
   const [resetTargetUser, setResetTargetUser] = useState<UserAccount | null>(null);
 
   // Internal workspace note state
@@ -1008,102 +1009,166 @@ export default function AdminPortalView({
                   );
                 }
 
-                return groups.map((group) => (
-                  <div key={group.name} className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl space-y-4">
-                    {/* Company Header Card */}
-                    <div className="flex items-center justify-between pb-3.5 border-b border-white/5 font-sans">
-                      <div className="flex items-center gap-3">
-                        {group.logo ? (
-                          <img src={group.logo} alt={group.name} className="w-9 h-9 rounded-xl object-contain bg-white/5 border border-white/10 p-1" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
-                            <Building2 className="w-4 h-4" />
+                return (
+                  <div className="space-y-6">
+                    {/* Grid of Company Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {groups.map((group) => {
+                        const isSelected = activeCompanyCard === group.name;
+                        return (
+                          <div
+                            key={group.name}
+                            onClick={() => setActiveCompanyCard(activeCompanyCard === group.name ? null : group.name)}
+                            className={`p-5 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between h-36 ${
+                              isSelected
+                                ? 'bg-indigo-600/15 border-[#A78BFA] shadow-[0_0_20px_rgba(108,99,255,0.25)] scale-[1.02]'
+                                : 'bg-white/[0.02] border-white/10 hover:bg-white/[0.04] hover:border-white/20 hover:scale-[1.01]'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3 overflow-hidden">
+                              <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+                                {group.logo ? (
+                                  <img src={group.logo} alt={group.name} className="w-9 h-9 rounded-xl object-contain bg-white/5 border border-white/10 p-1 shrink-0" />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-xl bg-[#6C63FF]/15 border border-[#6C63FF]/30 flex items-center justify-center text-indigo-300 shrink-0">
+                                    <Building2 className="w-4 h-4" />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1 overflow-hidden">
+                                  <h3 className="text-sm font-extrabold text-white font-sans truncate">{group.name}</h3>
+                                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate" title={group.address}>
+                                    {group.address.split(',').slice(0, 2).join(',')}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between border-t border-white/5 pt-3.5 mt-2">
+                              <span className="text-[9px] font-mono text-[#A78BFA] font-bold uppercase tracking-wider">
+                                {isSelected ? 'Click to collapse' : 'Click to inspect'}
+                              </span>
+                              <div className="px-2.5 py-0.5 rounded-lg bg-white/[0.04] border border-white/5 text-[9px] font-mono text-cyan-300 font-bold">
+                                {group.users.length} {group.users.length === 1 ? 'client' : 'clients'}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        <div>
-                          <h3 className="text-sm font-extrabold text-white font-sans">{group.name}</h3>
-                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">{group.address}</p>
-                        </div>
-                      </div>
-                      <div className="px-2.5 py-0.5 rounded-lg bg-white/[0.04] border border-white/5 text-[9px] font-mono text-[#A78BFA]">
-                        {group.users.length} {group.users.length === 1 ? 'identity' : 'identities'}
-                      </div>
+                        );
+                      })}
                     </div>
 
-                    {/* Users table */}
-                    <div className="overflow-hidden rounded-xl border border-white/5 bg-black/10">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr className="border-b border-white/5 bg-white/[0.02] text-slate-400 font-mono uppercase text-[8px]">
-                            <th className="p-3">Staff ID</th>
-                            <th className="p-3">Operator Name</th>
-                            <th className="p-3">Username</th>
-                            <th className="p-3">Email</th>
-                            <th className="p-3">Oversight Department</th>
-                            <th className="p-3">Telemetry Access State</th>
-                            <th className="p-3 text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5 text-slate-300 font-medium">
-                          {group.users.map((user) => (
-                            <tr key={user.id} className="hover:bg-white/[0.01] transition-all">
-                              <td className="p-3 font-mono text-slate-500">{user.id}</td>
-                              <td className="p-3 text-white font-bold flex items-center gap-2">
-                                <img
-                                  src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120'}
-                                  alt={user.name}
-                                  className="w-6 h-6 rounded-full border border-[#6C63FF]/30 object-cover bg-slate-900"
-                                />
-                                <span>{user.name}</span>
-                              </td>
-                              <td className="p-3 font-mono text-cyan-400">@{user.username}</td>
-                              <td className="p-3 text-slate-300">{user.email}</td>
-                              <td className="p-3 text-slate-400 font-medium">{user.department}</td>
-                              <td className="p-3">
-                                <span className={`px-2 py-0.5 rounded-full text-[8px] font-mono font-bold ${
-                                  user.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                }`}>
-                                  {user.status}
-                                </span>
-                              </td>
-                              <td className="p-3 text-right space-x-2">
-                                <button
-                                  onClick={() => startEditUser(user)}
-                                  className="p-1 px-2.5 rounded text-[9px] font-sans font-bold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 cursor-pointer transition-colors"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => handleResetUserPassword(user)}
-                                  className="p-1 px-2.5 rounded text-[9px] font-sans font-bold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 cursor-pointer transition-colors"
-                                >
-                                  Reset Pass
-                                </button>
-                                <button
-                                  onClick={() => handleToggleUserStatus(user.id, 'user')}
-                                  className={`p-1 px-2.5 rounded text-[9px] font-mono font-bold cursor-pointer transition-colors ${
-                                    user.status === 'active' 
-                                      ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20' 
-                                      : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20'
-                                  }`}
-                                >
-                                  {user.status === 'active' ? 'Deactivate' : 'Reactivate'}
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  className="p-1 px-2 rounded text-[9px] font-sans font-bold bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 cursor-pointer transition-colors inline-block align-middle"
-                                  title="Delete User Permanently"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    {/* Users list for selected company card */}
+                    <AnimatePresence mode="wait">
+                      {activeCompanyCard && groupedUsers[activeCompanyCard] ? (
+                        <motion.div
+                          key={activeCompanyCard}
+                          initial={{ opacity: 0, y: 15 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -15 }}
+                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                          className="p-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/[0.01] backdrop-blur-xl space-y-4"
+                        >
+                          <div className="flex items-center justify-between pb-3.5 border-b border-white/5 font-sans">
+                            <div className="flex items-center gap-2.5">
+                              <Building2 className="w-4 h-4 text-cyan-400" />
+                              <span className="text-xs font-bold text-white font-sans">
+                                Showing accounts registered under <span className="text-[#A78BFA] font-extrabold">{activeCompanyCard}</span>
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => setActiveCompanyCard(null)}
+                              className="text-[10px] text-slate-400 hover:text-white font-mono cursor-pointer font-bold border border-white/10 px-2.5 py-1 rounded bg-white/5"
+                            >
+                              Close Panel
+                            </button>
+                          </div>
+
+                          {/* Users table */}
+                          <div className="overflow-hidden rounded-xl border border-white/5 bg-black/10">
+                            <table className="w-full text-left border-collapse text-xs">
+                              <thead>
+                                <tr className="border-b border-white/5 bg-white/[0.02] text-slate-400 font-mono uppercase text-[8px]">
+                                  <th className="p-3">Staff ID</th>
+                                  <th className="p-3">Operator Name</th>
+                                  <th className="p-3">Username</th>
+                                  <th className="p-3">Email</th>
+                                  <th className="p-3">Oversight Department</th>
+                                  <th className="p-3">Telemetry Access State</th>
+                                  <th className="p-3 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5 text-slate-300 font-medium">
+                                {groupedUsers[activeCompanyCard].users.map((user) => (
+                                  <tr key={user.id} className="hover:bg-white/[0.01] transition-all">
+                                    <td className="p-3 font-mono text-slate-500">{user.id}</td>
+                                    <td className="p-3 text-white font-bold flex items-center gap-2">
+                                      <img
+                                        src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120'}
+                                        alt={user.name}
+                                        className="w-6 h-6 rounded-full border border-[#6C63FF]/30 object-cover bg-slate-900"
+                                      />
+                                      <span>{user.name}</span>
+                                    </td>
+                                    <td className="p-3 font-mono text-cyan-400">@{user.username}</td>
+                                    <td className="p-3 text-slate-300">{user.email}</td>
+                                    <td className="p-3 text-slate-400 font-medium">{user.department}</td>
+                                    <td className="p-3">
+                                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-mono font-bold ${
+                                        user.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                      }`}>
+                                        {user.status}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 text-right space-x-2">
+                                      <button
+                                        onClick={() => startEditUser(user)}
+                                        className="p-1 px-2.5 rounded text-[9px] font-sans font-bold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 cursor-pointer transition-colors"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleResetUserPassword(user)}
+                                        className="p-1 px-2.5 rounded text-[9px] font-sans font-bold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 cursor-pointer transition-colors"
+                                      >
+                                        Reset Pass
+                                      </button>
+                                      <button
+                                        onClick={() => handleToggleUserStatus(user.id, 'user')}
+                                        className={`p-1 px-2.5 rounded text-[9px] font-mono font-bold cursor-pointer transition-colors ${
+                                          user.status === 'active' 
+                                            ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20' 
+                                            : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20'
+                                        }`}
+                                      >
+                                        {user.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteUser(user.id)}
+                                        className="p-1 px-2 rounded text-[9px] font-sans font-bold bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 cursor-pointer transition-colors inline-block align-middle"
+                                        title="Delete User Permanently"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="placeholder"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="text-center py-10 border border-white/5 rounded-2xl bg-white/[0.01]"
+                        >
+                          <HelpCircle className="w-8 h-8 text-slate-700 mx-auto mb-2 animate-pulse" />
+                          <p className="text-slate-500 font-medium text-xs font-mono">Select a company card above to view associated user accounts.</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                ));
+                );
               })()}
             </div>
           </div>

@@ -413,10 +413,10 @@ export default function UserPortalView({
                         <Building2 className="w-3.5 h-3.5" />
                       </div>
                     )}
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 overflow-hidden">
                       <p className="text-[10px] font-bold text-slate-200 truncate">{userCompany.name}</p>
                       <p className="text-[8px] font-mono text-slate-500 truncate" title={userCompany.address}>
-                        {userCompany.address}
+                        {userCompany.address.split(',').slice(0, 2).join(',')}
                       </p>
                     </div>
                   </div>
@@ -545,10 +545,10 @@ export default function UserPortalView({
                   <Building2 className="w-3.5 h-3.5" />
                 </div>
               )}
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <p className="text-[10px] font-bold text-slate-200 truncate">{userCompany.name}</p>
                 <p className="text-[8px] font-mono text-slate-500 truncate" title={userCompany.address}>
-                  {userCompany.address}
+                  {userCompany.address.split(',').slice(0, 2).join(',')}
                 </p>
               </div>
             </div>
