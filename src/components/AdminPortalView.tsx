@@ -1084,100 +1084,127 @@ export default function AdminPortalView({
                             </button>
                           </div>
 
-                          {/* Users table */}
-                          <div className="overflow-hidden rounded-xl border border-white/5 bg-black/10">
-                            <table className="w-full text-left border-collapse text-xs">
-                              <thead>
-                                <tr className="border-b border-white/5 bg-white/[0.02] text-slate-400 font-mono uppercase text-[8px]">
-                                  <th className="p-3">Staff ID</th>
-                                  <th className="p-3">Operator Name</th>
-                                  <th className="p-3">Username</th>
-                                  <th className="p-3">Email</th>
-                                  <th className="p-3">Department</th>
-                                  <th className="p-3">Password</th>
-                                  <th className="p-3">Status</th>
-                                  <th className="p-3 text-right">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-white/5 text-slate-300 font-medium">
-                                {groupedUsers[activeCompanyCard].users.map((user) => (
-                                  <tr key={user.id} className="hover:bg-white/[0.01] transition-all">
-                                    <td className="p-3 font-mono text-slate-500">{user.id}</td>
-                                    <td className="p-3 text-white font-bold flex items-center gap-2">
+                          {/* Users Card Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {groupedUsers[activeCompanyCard].users.map((user) => {
+                              const openTickets = tickets.filter(t =>
+                                (t.clientName === user.name || t.clientEmail === user.email) &&
+                                !['resolved', 'closed'].includes(t.status)
+                              ).length;
+                              const maxLoad = 10;
+                              const loadPct = Math.min((openTickets / maxLoad) * 100, 100);
+
+                              return (
+                                <div
+                                  key={user.id}
+                                  className="relative p-5 rounded-2xl border border-white/8 bg-[#0d1117]/80 backdrop-blur-sm hover:border-white/15 transition-all duration-300 flex flex-col gap-4 group"
+                                  style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}
+                                >
+                                  {/* ── Top: Avatar + Name + Badge ── */}
+                                  <div className="flex items-center gap-3.5">
+                                    <div className="relative shrink-0">
                                       <img
-                                        src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120'}
+                                        src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6C63FF&color=fff&size=80`}
                                         alt={user.name}
-                                        className="w-6 h-6 rounded-full border border-[#6C63FF]/30 object-cover bg-slate-900"
+                                        className="w-14 h-14 rounded-full object-cover border-2 border-[#6C63FF]/40 bg-slate-900 shadow-lg"
                                       />
-                                      <span>{user.name}</span>
-                                    </td>
-                                    <td className="p-3 font-mono text-cyan-400">@{user.username}</td>
-                                    <td className="p-3 text-slate-300 text-[11px] max-w-[140px] truncate" title={user.email}>{user.email}</td>
-                                    <td className="p-3 text-slate-400 font-medium">{user.department}</td>
-                                    {/* Password column — visible to admin only */}
-                                    <td className="p-3">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="font-mono text-[11px] text-amber-300 tracking-wide">
-                                          {user.password
-                                            ? (revealedPasswords[user.id] ? user.password : '••••••••')
-                                            : <span className="text-slate-600 italic text-[9px]">not set</span>}
-                                        </span>
-                                        {user.password && (
-                                          <button
-                                            onClick={() => toggleRevealPassword(user.id)}
-                                            className="text-slate-500 hover:text-amber-300 transition-colors cursor-pointer"
-                                            title={revealedPasswords[user.id] ? 'Hide password' : 'Reveal password'}
-                                          >
-                                            {revealedPasswords[user.id]
-                                              ? <EyeOff className="w-3 h-3" />
-                                              : <Eye className="w-3 h-3" />}
-                                          </button>
-                                        )}
-                                      </div>
-                                    </td>
-                                    <td className="p-3">
-                                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-mono font-bold ${
-                                        user.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                      }`}>
-                                        {user.status}
+                                      <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0d1117] ${user.status === 'active' ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="text-sm font-extrabold text-white leading-tight truncate font-sans">{user.name}</h4>
+                                      <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-md bg-[#6C63FF]/20 border border-[#6C63FF]/30 text-[9px] font-mono font-bold text-[#A78BFA] uppercase tracking-wider truncate max-w-full">
+                                        {user.department}
                                       </span>
-                                    </td>
-                                    <td className="p-3 text-right space-x-2">
-                                      <button
-                                        onClick={() => startEditUser(user)}
-                                        className="p-1 px-2.5 rounded text-[9px] font-sans font-bold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 cursor-pointer transition-colors"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() => handleResetUserPassword(user)}
-                                        className="p-1 px-2.5 rounded text-[9px] font-sans font-bold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 cursor-pointer transition-colors"
-                                      >
-                                        Reset Pass
-                                      </button>
-                                      <button
-                                        onClick={() => handleToggleUserStatus(user.id, 'user')}
-                                        className={`p-1 px-2.5 rounded text-[9px] font-mono font-bold cursor-pointer transition-colors ${
-                                          user.status === 'active' 
-                                            ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20' 
-                                            : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20'
-                                        }`}
-                                      >
-                                        {user.status === 'active' ? 'Deactivate' : 'Reactivate'}
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteUser(user.id)}
-                                        className="p-1 px-2 rounded text-[9px] font-sans font-bold bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 cursor-pointer transition-colors inline-block align-middle"
-                                        title="Delete User Permanently"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                    </div>
+                                  </div>
+
+                                  {/* ── Workload + Open Tickets ── */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] text-slate-500 font-mono">Current Workload quota</span>
+                                      <span className="text-[11px] font-bold font-mono text-[#A78BFA]">
+                                        {openTickets} <span className="text-slate-400 font-normal">Open Tickets</span>
+                                      </span>
+                                    </div>
+                                    <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                      <div
+                                        className="h-full rounded-full bg-gradient-to-r from-[#6C63FF] to-[#A78BFA] transition-all duration-700"
+                                        style={{ width: `${openTickets === 0 ? 100 : loadPct}%`, opacity: openTickets === 0 ? 0.15 : 1 }}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* ── Divider ── */}
+                                  <div className="border-t border-white/5" />
+
+                                  {/* ── Status + Email + Password ── */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-[10px] font-mono text-slate-500">Status:</span>
+                                      <span className={`text-[10px] font-mono font-bold ${user.status === 'active' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        {user.status.toUpperCase()}
+                                      </span>
+                                      <span className="text-[10px] text-slate-500 font-mono ml-auto truncate max-w-[160px]" title={user.email}>
+                                        {user.email}
+                                      </span>
+                                    </div>
+                                    {/* Password row */}
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[10px] font-mono text-slate-500">Password:</span>
+                                      <span className="font-mono text-[11px] text-amber-300 tracking-wide">
+                                        {user.password
+                                          ? (revealedPasswords[user.id] ? user.password : '••••••••')
+                                          : <span className="text-slate-600 italic text-[9px]">not set</span>}
+                                      </span>
+                                      {user.password && (
+                                        <button
+                                          onClick={() => toggleRevealPassword(user.id)}
+                                          className="text-slate-600 hover:text-amber-300 transition-colors cursor-pointer ml-0.5"
+                                          title={revealedPasswords[user.id] ? 'Hide' : 'Reveal'}
+                                        >
+                                          {revealedPasswords[user.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* ── Action Buttons ── */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                      onClick={() => startEditUser(user)}
+                                      className="flex-1 min-w-[70px] py-2 rounded-xl text-[10px] font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 hover:border-cyan-500/40 transition-all cursor-pointer text-center"
+                                    >
+                                      Edit<br />Details
+                                    </button>
+                                    <button
+                                      onClick={() => handleResetUserPassword(user)}
+                                      className="flex-1 min-w-[70px] py-2 rounded-xl text-[10px] font-bold text-[#A78BFA] bg-[#6C63FF]/10 border border-[#6C63FF]/20 hover:bg-[#6C63FF]/20 hover:border-[#6C63FF]/40 transition-all cursor-pointer text-center"
+                                    >
+                                      Reset<br />Pass
+                                    </button>
+                                    <button
+                                      onClick={() => handleToggleUserStatus(user.id, 'user')}
+                                      className={`flex-1 min-w-[70px] py-2 rounded-xl text-[10px] font-bold transition-all cursor-pointer text-center ${
+                                        user.status === 'active'
+                                          ? 'text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/40'
+                                          : 'text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/40'
+                                      }`}
+                                    >
+                                      {user.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteUser(user.id)}
+                                      className="p-2 rounded-xl text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/40 transition-all cursor-pointer"
+                                      title="Delete User Permanently"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
+
                         </motion.div>
                       ) : (
                         <motion.div
