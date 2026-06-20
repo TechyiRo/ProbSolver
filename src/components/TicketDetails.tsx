@@ -143,7 +143,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
     } else {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [ticket?.timeline, notes]);
+  }, [ticket?.id, ticket?.timeline?.length, notes?.length]);
 
   // ── Empty state ─────────────────────────────────────────────────────────────
   if (!ticket) {
