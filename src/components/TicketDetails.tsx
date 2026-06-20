@@ -128,6 +128,40 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
   const [notes, setNotes]                     = useState<ChatNote[]>([]);
   const [showPinnedPanel, setShowPinnedPanel] = useState(true);
 
+  // Load notes on ticket change
+  useEffect(() => {
+    if (!ticket) {
+      setNotes([]);
+      return;
+    }
+    const key = `ticket-notes-${ticket.id}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        setNotes(JSON.parse(saved));
+      } catch (err) {
+        setNotes([]);
+      }
+    } else {
+      setNotes([]);
+    }
+  }, [ticket?.id]);
+
+  // Securely update notes and synchronize with localStorage per ticket ID
+  const updateNotes = (newNotes: ChatNote[] | ((prev: ChatNote[]) => ChatNote[])) => {
+    if (!ticket) return;
+    setNotes(prev => {
+      const updated = typeof newNotes === 'function' ? newNotes(prev) : newNotes;
+      const key = `ticket-notes-${ticket.id}`;
+      if (updated.length > 0) {
+        localStorage.setItem(key, JSON.stringify(updated));
+      } else {
+        localStorage.removeItem(key);
+      }
+      return updated;
+    });
+  };
+
   const chatBottomRef   = useRef<HTMLDivElement>(null);
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const recordTimerRef  = useRef<ReturnType<typeof setInterval>|null>(null);
@@ -183,7 +217,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
         author: currentUserName || agentDisplayName,
         timestamp: new Date().toISOString(),
       };
-      setNotes(prev => [...prev, newNote]);
+      updateNotes(prev => [...prev, newNote]);
       setReplyText('');
       return;
     }
@@ -219,7 +253,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
   };
 
   const togglePinNote = (id: string) => {
-    setNotes(prev => {
+    updateNotes(prev => {
       const pinned = prev.filter(n => n.pinned).length;
       return prev.map(n => {
         if (n.id !== id) return n;
@@ -229,7 +263,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
     });
   };
 
-  const deleteNote = (id: string) => setNotes(prev => prev.filter(n => n.id !== id));
+  const deleteNote = (id: string) => updateNotes(prev => prev.filter(n => n.id !== id));
 
   const triggerAiDraft = () => {
     setIsAiDrafting(true);
