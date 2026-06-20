@@ -390,6 +390,13 @@ export default function LoginPortal({ onLoginSuccess, dbStatus }: LoginPortalPro
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Developer Credit Footer */}
+      <div className="absolute bottom-6 left-0 right-0 text-center z-10">
+        <p className="text-[9px] text-slate-500 font-mono tracking-[0.2em] uppercase">
+          Developed by <span className="text-indigo-400/80 font-bold hover:text-indigo-300 transition-colors cursor-default">Rohidas Shinde</span>
+        </p>
+      </div>
     </div>
   );
 }
