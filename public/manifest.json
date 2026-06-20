@@ -1,0 +1,28 @@
+{
+  "short_name": "ProbSolver",
+  "name": "ProbSolver - Smarter Support",
+  "description": "Enterprise-grade IT helpdesk ticketing system.",
+  "icons": [
+    {
+      "src": "/image/logo Authenticate.png",
+      "type": "image/png",
+      "sizes": "1254x1254",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/image/logo Authenticate.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/image/logo Authenticate.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a0f1d",
+  "theme_color": "#0a0f1d",
+  "display": "standalone",
+  "orientation": "portrait"
+}
