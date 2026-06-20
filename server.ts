@@ -17,7 +17,11 @@ let dbConnectionStringUsed = "";
 let dbErrorMessage = "";
 
 // Default raw user connection with fallback parameter
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://vrticket:Admin%40123!@ac-95y1fw9-shard-00-00.akel4ug.mongodb.net:27017,ac-95y1fw9-shard-00-01.akel4ug.mongodb.net:27017,ac-95y1fw9-shard-00-02.akel4ug.mongodb.net:27017/?ssl=true&replicaSet=atlas-113v5z-shard-0&authSource=admin&appName=VR-Ticket";
+let MONGODB_URI = process.env.MONGODB_URI || "mongodb://vrticket:Admin%40123!@ac-95y1fw9-shard-00-00.akel4ug.mongodb.net:27017,ac-95y1fw9-shard-00-01.akel4ug.mongodb.net:27017,ac-95y1fw9-shard-00-02.akel4ug.mongodb.net:27017/?ssl=true&replicaSet=atlas-113v5z-shard-0&authSource=admin&appName=VR-Ticket";
+
+// Sanitize any leading/trailing quotes or spaces from environment managers (e.g. Render/Railway)
+MONGODB_URI = MONGODB_URI.trim().replace(/^['"]|['"]$/g, '');
+
 dbConnectionStringUsed = MONGODB_URI.replace(/:([^@]+)@/, ":******@"); // Obfuscate password in UI/logs
 
 // Connect asynchronously to prevent blocking server launch or causing timeouts
