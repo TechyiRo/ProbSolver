@@ -405,7 +405,7 @@ export default function AdminPortalView({
   });
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row min-h-screen bg-[#050814]">
+    <div className="flex-1 flex flex-col md:flex-row h-screen overflow-hidden bg-[#050814]">
       
       {/* MOBILE TOP BAR (Only visible on mobile) */}
       <header className="flex md:hidden items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.01] backdrop-blur-xl z-30 shrink-0">
@@ -519,7 +519,7 @@ export default function AdminPortalView({
       </AnimatePresence>
 
       {/* SIDEBAR NAVIGATION CONTROL (Aether admin look) */}
-      <aside className="hidden md:flex w-full md:w-60 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex-col p-6 gap-6 shrink-0 z-20">
+      <aside className="hidden md:flex w-full md:w-60 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01] backdrop-blur-xl flex-col p-6 gap-6 shrink-0 z-20 h-screen overflow-hidden">
         <div className="border-b border-white/5 pb-5 flex flex-col gap-1">
           <img
             src="/image/logo.png"
@@ -582,7 +582,7 @@ export default function AdminPortalView({
       </aside>
 
       {/* CORE ADMIN CONTENT */}
-      <main className="flex-1 p-6 sm:p-8 overflow-y-auto relative z-10 w-full flex flex-col gap-6">
+      <main className="flex-1 p-6 sm:p-8 overflow-y-auto relative z-10 w-full flex flex-col gap-6 h-screen">
         
         {/* TAB 1 — ADMIN DESK OVERVIEW */}
         {activeAdminSubTab === 'dashboard' && (
@@ -674,10 +674,27 @@ export default function AdminPortalView({
         {activeAdminSubTab === 'tickets' && (
           <div className="space-y-6">
             
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                <h2 className="text-2xl font-extrabold text-[#F1F5F9] font-sans tracking-tight">IT Helpdesk Support Ingress</h2>
-                <p className="text-slate-400 text-xs mt-1">Multi-attribute filter indexes, workforce deployment tools, and bulk status updates</p>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div className="relative">
+                {/* Animated background glow behind title */}
+                <div className="absolute -inset-3 rounded-2xl bg-gradient-to-r from-[#6C63FF]/8 via-transparent to-cyan-500/8 blur-xl pointer-events-none" />
+                <div className="relative flex items-center gap-3 mb-1">
+                  {/* Radar ping */}
+                  <div className="relative flex items-center justify-center w-8 h-8">
+                    <span className="absolute inset-0 rounded-full bg-[#6C63FF]/20 animate-ping" style={{ animationDuration: '2.5s' }} />
+                    <span className="absolute inset-1 rounded-full bg-[#6C63FF]/30 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.4s' }} />
+                    <Server className="w-4 h-4 text-[#A78BFA] relative z-10" />
+                  </div>
+                  <h2 className="text-2xl font-extrabold font-sans tracking-tight bg-gradient-to-r from-white via-[#A78BFA] to-cyan-400 bg-clip-text text-transparent">
+                    IT Helpdesk Support Ingress
+                  </h2>
+                  {/* Live badge */}
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Live
+                  </span>
+                </div>
+                <p className="text-slate-400 text-xs mt-0.5 pl-11 font-mono">Multi-attribute filter indexes, workforce deployment tools, and bulk status updates</p>
               </div>
             </div>
 
@@ -724,61 +741,43 @@ export default function AdminPortalView({
             )}
 
             {/* Dynamic filter panel */}
-            <div className="p-4 rounded-xl border border-white/5 bg-white/[0.01] grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+            <div className="p-4 rounded-2xl border border-white/8 bg-white/[0.02] backdrop-blur-xl grid grid-cols-1 md:grid-cols-4 gap-3 text-xs" style={{ boxShadow: '0 0 30px rgba(108,99,255,0.06)' }}>
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#A78BFA]" />
                 <input
                   type="text"
                   placeholder="ID, Title, Submitter..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-white/10 bg-white/[0.02] text-white focus:outline-none focus:border-purple-600 focus:bg-white/[0.04] transition-all"
+                  className="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl border border-[#6C63FF]/20 bg-[#6C63FF]/5 text-white placeholder-slate-500 focus:outline-none focus:border-[#A78BFA]/50 focus:bg-[#6C63FF]/10 transition-all"
                 />
               </div>
-
-              <div>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as any)}
-                  className="w-full p-2 rounded-lg border border-white/10 bg-[#0f1129] text-white font-mono text-[11px] cursor-pointer"
-                >
-                  <option value="all">Any Status</option>
-                  <option value="open">Open</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="pending">Pending</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </div>
-
-              <div>
-                <select
-                  value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value as any)}
-                  className="w-full p-2 rounded-lg border border-white/10 bg-[#0f1129] text-white font-mono text-[11px] cursor-pointer"
-                >
-                  <option value="all">Any Threat</option>
-                  <option value="low">Low Severity</option>
-                  <option value="medium">Medium Threat</option>
-                  <option value="high">High priority</option>
-                  <option value="critical">Critical Exceeds</option>
-                </select>
-              </div>
-
-              <div>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full p-2 rounded-lg border border-white/10 bg-[#0f1129] text-white font-mono text-[11px] cursor-pointer"
-                >
-                  <option value="all">Any Category</option>
-                  <option value="Hardware">Hardware Diagnostics</option>
-                  <option value="Software">Software Softwares</option>
-                  <option value="Network">Network Links</option>
-                  <option value="Access">Access Permissions</option>
-                  <option value="Other">Standard</option>
-                </select>
-              </div>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="w-full p-2.5 rounded-xl border border-white/10 bg-[#0a0f1d] text-white font-mono text-[11px] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50">
+                <option value="all">Any Status</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="pending">Pending</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+              <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as any)}
+                className="w-full p-2.5 rounded-xl border border-white/10 bg-[#0a0f1d] text-white font-mono text-[11px] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50">
+                <option value="all">Any Threat</option>
+                <option value="low">Low Severity</option>
+                <option value="medium">Medium Threat</option>
+                <option value="high">High Priority</option>
+                <option value="critical">Critical Exceeds</option>
+              </select>
+              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full p-2.5 rounded-xl border border-white/10 bg-[#0a0f1d] text-white font-mono text-[11px] cursor-pointer focus:outline-none focus:border-[#A78BFA]/50">
+                <option value="all">Any Category</option>
+                <option value="Hardware">Hardware Diagnostics</option>
+                <option value="Software">Software Issues</option>
+                <option value="Network">Network Links</option>
+                <option value="Access">Access Permissions</option>
+                <option value="Other">Standard</option>
+              </select>
             </div>
 
             {/* Primary Grid Workspace */}
