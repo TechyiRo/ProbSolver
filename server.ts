@@ -1,0 +1,522 @@
+import express from 'express';
+import path from 'path';
+import { createServer as createViteServer } from 'vite';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const app = express();
+const PORT = 3000;
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use('/image', express.static(path.join(process.cwd(), 'image')));
+// State & Fallbacks for Offline/Sandbox state
+let isDbConnected = false;
+let dbConnectionStringUsed = "";
+let dbErrorMessage = "";
+
+// Default raw user connection with fallback parameter
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://vrticket:Admin%40123!@ac-95y1fw9-shard-00-00.akel4ug.mongodb.net:27017,ac-95y1fw9-shard-00-01.akel4ug.mongodb.net:27017,ac-95y1fw9-shard-00-02.akel4ug.mongodb.net:27017/?ssl=true&replicaSet=atlas-113v5z-shard-0&authSource=admin&appName=VR-Ticket";
+dbConnectionStringUsed = MONGODB_URI.replace(/:([^@]+)@/, ":******@"); // Obfuscate password in UI/logs
+
+// Connect asynchronously to prevent blocking server launch or causing timeouts
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log("Successfully established secure connection tunnel with MongoDB cluster");
+    isDbConnected = true;
+    // seedDatabaseIfNeeded(); // Disabled to allow a clean slate as requested by the user
+  })
+  .catch((err: any) => {
+    console.error("MongoDB Cluster Connection warning:", err);
+    dbErrorMessage = err.message || String(err);
+  });
+
+// --- MONGODB SCHEMAS & MODELS ---
+const AttachmentSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  size: { type: String, required: true },
+  type: { type: String, required: true }
+});
+
+const TimelineMessageSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  sender: { type: String, required: true, enum: ['client', 'agent', 'system'] },
+  text: { type: String, required: true },
+  timestamp: { type: String, required: true }
+});
+
+const TicketSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  category: { type: String, required: true, enum: ['Network', 'Access', 'Hardware', 'Software'] },
+  priority: { type: String, required: true, enum: ['low', 'medium', 'high', 'critical'] },
+  status: { type: String, required: true, enum: ['open', 'in_progress', 'pending', 'resolved', 'closed'] },
+  clientName: { type: String, required: true },
+  clientEmail: { type: String, required: true },
+  assigneeName: { type: String, default: 'Elena Rostova' },
+  assigneeAvatar: { type: String, default: '' },
+  date: { type: String, required: true },
+  internalNotes: { type: [String], default: [] },
+  attachments: { type: [AttachmentSchema], default: [] },
+  timeline: { type: [TimelineMessageSchema], default: [] }
+});
+
+const NotificationSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  text: { type: String, required: true },
+  type: { type: String, required: true },
+  timestamp: { type: String, required: true },
+  read: { type: Boolean, default: false },
+  ticketId: { type: String }
+});
+
+const TicketModel = mongoose.models.Ticket || mongoose.model('Ticket', TicketSchema);
+const NotificationModel = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);
+
+const UserAccountSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
+  department: { type: String, required: true },
+  status: { type: String, required: true, enum: ['active', 'inactive'] },
+  role: { type: String, required: true, enum: ['user', 'employee'] },
+  specialization: { type: String },
+  currentWorkload: { type: Number },
+  avatar: { type: String },
+  password: { type: String },
+  isFirstLogin: { type: Boolean, default: true }
+});
+
+const UserAccountModel = mongoose.models.UserAccount || mongoose.model('UserAccount', UserAccountSchema);
+
+// In-Memory Backups if DB fails
+let localMemoryTickets: any[] = [];
+let localMemoryNotifications: any[] = [];
+let localMemoryUsers: any[] = [];
+
+// Fallback loader if DB is completely unavailable during testing/sandboxing
+async function seedDatabaseIfNeeded() {
+  try {
+    const ticketCount = await TicketModel.countDocuments();
+    const notifCount = await NotificationModel.countDocuments();
+    const userAccCount = await UserAccountModel.countDocuments();
+
+    // Import base records
+    const { INITIAL_TICKETS, INITIAL_NOTIFICATIONS, INITIAL_USERS, INITIAL_EMPLOYEES } = await import('./src/mockData');
+
+    if (ticketCount === 0) {
+      console.log("Seeding MongoDB with default tickets...");
+      await TicketModel.insertMany(INITIAL_TICKETS as any[]);
+    }
+    if (notifCount === 0) {
+      console.log("Seeding MongoDB with default system notifications...");
+      await NotificationModel.insertMany(INITIAL_NOTIFICATIONS as any[]);
+    }
+    if (userAccCount === 0) {
+      console.log("Seeding MongoDB with default user and employee accounts...");
+      await UserAccountModel.insertMany([...INITIAL_USERS, ...INITIAL_EMPLOYEES] as any[]);
+    }
+  } catch (err) {
+    console.error("Error seeding MongoDB:", err);
+  }
+}
+
+// Initial offline synchronization for failover safety
+(async () => {
+  try {
+    // Initialized as empty for a completely clean slate
+    localMemoryTickets = [];
+    localMemoryNotifications = [];
+    localMemoryUsers = [];
+  } catch (_) {}
+})();
+
+// --- API ENDPOINTS ---
+
+// Server health check & active connection tunnel monitoring telemetry
+app.get('/api/db-status', (req, res) => {
+  res.json({
+    connected: isDbConnected,
+    connectionString: dbConnectionStringUsed,
+    error: dbErrorMessage || null,
+    provider: isDbConnected ? "MongoDB Atlas Real-Time Segment" : "In-Memory Sandbox Failover"
+  });
+});
+
+// GET /api/users
+app.get('/api/users', async (req, res) => {
+  try {
+    if (isDbConnected) {
+      const users = await UserAccountModel.find({} as any);
+      res.json(users);
+    } else {
+      res.json(localMemoryUsers);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/login
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const u = username.toLowerCase().trim();
+    const p = password.trim();
+
+    // 1. Check if user is in database/memory
+    let userRecord = null;
+    if (isDbConnected) {
+      userRecord = await UserAccountModel.findOne({ username: u } as any);
+    } else {
+      userRecord = localMemoryUsers.find(user => user.username === u);
+    }
+
+    if (userRecord) {
+      // Validate password
+      if (userRecord.password === p) {
+        return res.json({
+          success: true,
+          user: {
+            id: userRecord.id,
+            name: userRecord.name,
+            username: userRecord.username,
+            email: userRecord.email,
+            role: userRecord.role,
+            isFirstLogin: userRecord.isFirstLogin ?? false,
+            avatar: userRecord.avatar || ""
+          }
+        });
+      } else {
+        return res.status(401).json({ error: "Invalid credentials." });
+      }
+    }
+
+    // 2. Fallbacks
+    if (u === 'admin' && p === 'admin') {
+      return res.json({
+        success: true,
+        user: { id: "admin_node", name: "Platform Chief", username: "admin", email: "admin.chief@vrtickets.secure", role: "admin", isFirstLogin: false, avatar: "" }
+      });
+    } else if (u === 'user' && p === 'user') {
+      return res.json({
+        success: true,
+        user: { id: "client_alex", name: "Alexander Wright", username: "user", email: "a.wright@hyperplane.io", role: "user", isFirstLogin: false, avatar: "" }
+      });
+    } else if (u === 'employee' && p === 'employee') {
+      return res.json({
+        success: true,
+        user: { id: "tech_elena", name: "Elena Rostova", username: "employee", email: "e.rostova@vrtickets.secure", role: "employee", isFirstLogin: false, avatar: "" }
+      });
+    }
+
+    return res.status(401).json({ error: "User profile not found." });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users/:id/first-setup
+app.post('/api/users/:id/first-setup', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password, avatar } = req.body;
+
+    if (isDbConnected) {
+      const updatedUser = await UserAccountModel.findOneAndUpdate(
+        { id } as any,
+        { password, avatar, isFirstLogin: false } as any,
+        { new: true } as any
+      );
+      if (!updatedUser) return res.status(404).json({ error: "User not found." });
+      res.json({ success: true });
+    } else {
+      const idx = localMemoryUsers.findIndex(u => u.id === id);
+      if (idx === -1) return res.status(404).json({ error: "User not found." });
+      localMemoryUsers[idx].password = password;
+      localMemoryUsers[idx].avatar = avatar;
+      localMemoryUsers[idx].isFirstLogin = false;
+      res.json({ success: true });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users
+app.post('/api/users', async (req, res) => {
+  try {
+    const userData = req.body;
+    if (isDbConnected) {
+      const newUser = new UserAccountModel(userData);
+      await newUser.save();
+      res.status(201).json(newUser);
+    } else {
+      localMemoryUsers.push(userData);
+      res.status(201).json(userData);
+    }
+  } catch (err: any) {
+    console.error("Error creating user:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/users/:id
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    if (isDbConnected) {
+      const updatedUser = await UserAccountModel.findOneAndUpdate({ id } as any, updates, { new: true } as any);
+      if (!updatedUser) return res.status(404).json({ error: "User profile not found" });
+      res.json(updatedUser);
+    } else {
+      const idx = localMemoryUsers.findIndex(u => u.id === id);
+      if (idx === -1) return res.status(404).json({ error: "User profile not found" });
+      localMemoryUsers[idx] = { ...localMemoryUsers[idx], ...updates };
+      res.json(localMemoryUsers[idx]);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/users/:id
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (isDbConnected) {
+      const deletedUser = await UserAccountModel.findOneAndDelete({ id } as any);
+      if (!deletedUser) return res.status(404).json({ error: "User profile not found" });
+      res.json({ success: true });
+    } else {
+      localMemoryUsers = localMemoryUsers.filter(u => u.id !== id);
+      res.json({ success: true });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/tickets
+app.get('/api/tickets', async (req, res) => {
+  try {
+    if (isDbConnected) {
+      const tickets = await TicketModel.find().sort({ date: -1 });
+      res.json(tickets);
+    } else {
+      res.json(localMemoryTickets);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/tickets
+app.post('/api/tickets', async (req, res) => {
+  try {
+    const ticketData = req.body;
+    if (isDbConnected) {
+      const newTicket = new TicketModel(ticketData);
+      await newTicket.save();
+      res.status(201).json(newTicket);
+    } else {
+      localMemoryTickets.unshift(ticketData);
+      res.status(201).json(ticketData);
+    }
+  } catch (err: any) {
+    console.error("Error creating ticket:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/tickets/:id
+app.put('/api/tickets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    if (isDbConnected) {
+      const updatedTicket = await TicketModel.findOneAndUpdate({ id } as any, updates, { new: true } as any);
+      if (!updatedTicket) return res.status(404).json({ error: "Ticket not recovered" });
+      res.json(updatedTicket);
+    } else {
+      const idx = localMemoryTickets.findIndex(t => t.id === id);
+      if (idx === -1) return res.status(404).json({ error: "Ticket not recovered" });
+      localMemoryTickets[idx] = { ...localMemoryTickets[idx], ...updates };
+      res.json(localMemoryTickets[idx]);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/tickets/:id/timeline
+app.post('/api/tickets/:id/timeline', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const message = req.body;
+    if (isDbConnected) {
+      const updatedTicket = await TicketModel.findOneAndUpdate(
+        { id } as any,
+        { $push: { timeline: message } } as any,
+        { new: true } as any
+      );
+      if (!updatedTicket) return res.status(404).json({ error: "Ticket not found" });
+      res.json(updatedTicket);
+    } else {
+      const idx = localMemoryTickets.findIndex(t => t.id === id);
+      if (idx === -1) return res.status(404).json({ error: "Ticket not found" });
+      localMemoryTickets[idx].timeline.push(message);
+      res.json(localMemoryTickets[idx]);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// In-memory typing status store
+const typingStatus: Record<string, { agent: boolean; client: boolean }> = {};
+
+// POST /api/tickets/:id/typing
+app.post('/api/tickets/:id/typing', (req, res) => {
+  const { id } = req.params;
+  const { sender, isTyping } = req.body;
+  if (!typingStatus[id]) {
+    typingStatus[id] = { agent: false, client: false };
+  }
+  if (sender === 'client') {
+    typingStatus[id].client = !!isTyping;
+  } else {
+    typingStatus[id].agent = !!isTyping;
+  }
+  res.json({ success: true, typing: typingStatus[id] });
+});
+
+// GET /api/tickets/:id/typing
+app.get('/api/tickets/:id/typing', (req, res) => {
+  const { id } = req.params;
+  res.json(typingStatus[id] || { agent: false, client: false });
+});
+
+// DELETE /api/tickets/:id
+app.delete('/api/tickets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (isDbConnected) {
+      await TicketModel.findOneAndDelete({ id } as any);
+      res.json({ success: true });
+    } else {
+      localMemoryTickets = localMemoryTickets.filter(t => t.id !== id);
+      res.json({ success: true });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/notifications
+app.get('/api/notifications', async (req, res) => {
+  try {
+    if (isDbConnected) {
+      const notifications = await NotificationModel.find().sort({ timestamp: -1 });
+      res.json(notifications);
+    } else {
+      res.json(localMemoryNotifications);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/notifications
+app.post('/api/notifications', async (req, res) => {
+  try {
+    const notificationData = req.body;
+    if (isDbConnected) {
+      const newNotification = new NotificationModel(notificationData);
+      await newNotification.save();
+      res.status(201).json(newNotification);
+    } else {
+      localMemoryNotifications.unshift(notificationData);
+      res.status(201).json(notificationData);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/notifications/read-all
+app.put('/api/notifications/read-all', async (req, res) => {
+  try {
+    if (isDbConnected) {
+      await NotificationModel.updateMany({ read: false }, { $set: { read: true } });
+      res.json({ success: true });
+    } else {
+      localMemoryNotifications = localMemoryNotifications.map(n => ({ ...n, read: true }));
+      res.json({ success: true });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/notifications/:id/read
+app.put('/api/notifications/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (isDbConnected) {
+      await NotificationModel.findOneAndUpdate({ id } as any, { $set: { read: true } } as any, {} as any);
+      res.json({ success: true });
+    } else {
+      const idx = localMemoryNotifications.findIndex(n => n.id === id);
+      if (idx !== -1) localMemoryNotifications[idx].read = true;
+      res.json({ success: true });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/notifications
+app.delete('/api/notifications', async (req, res) => {
+  try {
+    if (isDbConnected) {
+      await NotificationModel.deleteMany({});
+      res.json({ success: true });
+    } else {
+      localMemoryNotifications = [];
+      res.json({ success: true });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- VITE MIDDLEWARE ENROLLMENT ---
+async function startServer() {
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa'
+    });
+    app.use(vite.middlewares);
+    console.log("Vite interactive dev middleware bound to router cascade");
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+    console.log("Production static server route index active");
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Express application container listening securely on host 0.0.0.0:${PORT}`);
+  });
+}
+
+startServer();

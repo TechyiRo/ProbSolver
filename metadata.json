@@ -1,0 +1,6 @@
+{
+  "name": "Glassmorphic Ticketing Portal",
+  "description": "A high-fidelity modern support ticket queue and analytics dashboard with a sleek glassmorphic dark design concept, interactive 3D abstract background elements, priority metrics, and real-time resolution trends.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
