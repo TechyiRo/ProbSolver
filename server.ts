@@ -92,7 +92,12 @@ const UserAccountSchema = new mongoose.Schema({
   currentWorkload: { type: Number },
   avatar: { type: String },
   password: { type: String },
-  isFirstLogin: { type: Boolean, default: true }
+  isFirstLogin: { type: Boolean, default: true },
+  company: {
+    name: { type: String, default: '' },
+    address: { type: String, default: '' },
+    logo: { type: String, default: '' }
+  }
 });
 
 const UserAccountModel = mongoose.models.UserAccount || mongoose.model('UserAccount', UserAccountSchema);
@@ -192,7 +197,8 @@ app.post('/api/login', async (req, res) => {
             email: userRecord.email,
             role: userRecord.role,
             isFirstLogin: userRecord.isFirstLogin ?? false,
-            avatar: userRecord.avatar || ""
+            avatar: userRecord.avatar || "",
+            company: userRecord.company || undefined
           }
         });
       } else {
@@ -209,7 +215,20 @@ app.post('/api/login', async (req, res) => {
     } else if (u === 'user' && p === 'user') {
       return res.json({
         success: true,
-        user: { id: "client_alex", name: "Alexander Wright", username: "user", email: "a.wright@hyperplane.io", role: "user", isFirstLogin: false, avatar: "" }
+        user: { 
+          id: "client_alex", 
+          name: "Alexander Wright", 
+          username: "user", 
+          email: "a.wright@hyperplane.io", 
+          role: "user", 
+          isFirstLogin: false, 
+          avatar: "",
+          company: {
+            name: "SP IT",
+            address: "12 Corporate Heights, Sector 4, Silicon Valley",
+            logo: ""
+          }
+        }
       });
     } else if (u === 'employee' && p === 'employee') {
       return res.json({

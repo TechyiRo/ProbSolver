@@ -178,7 +178,12 @@ export const INITIAL_USERS: UserAccount[] = [
     department: 'IT',
     status: 'active',
     role: 'user',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120'
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
+    company: {
+      name: 'SP IT',
+      address: '12 Corporate Heights, Sector 4, Silicon Valley',
+      logo: ''
+    }
   },
   {
     id: 'USR-002',
@@ -188,7 +193,12 @@ export const INITIAL_USERS: UserAccount[] = [
     department: 'Operations',
     status: 'active',
     role: 'user',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=120'
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=120',
+    company: {
+      name: 'Clarity Analytics',
+      address: '88 Finance Square, Tower B, Level 14, Chicago',
+      logo: ''
+    }
   },
   {
     id: 'USR-003',
@@ -198,7 +208,12 @@ export const INITIAL_USERS: UserAccount[] = [
     department: 'Finance',
     status: 'active',
     role: 'user',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120'
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120',
+    company: {
+      name: 'Quant Labs SG',
+      address: 'Marina Bay Financial Centre, Tower 3, Singapore',
+      logo: ''
+    }
   }
 ];
 

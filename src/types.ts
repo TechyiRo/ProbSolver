@@ -49,6 +49,11 @@ export interface UserAccount {
   avatar: string;
   password?: string;
   isFirstLogin?: boolean;
+  company?: {
+    name: string;
+    address: string;
+    logo?: string;
+  };
 }
 
 export interface SystemNotification {

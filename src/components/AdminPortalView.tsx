@@ -4,7 +4,7 @@ import {
   Shield, Users, Activity, CheckCircle, BarChart3, TrendingUp, 
   Settings, AlertCircle, FileText, Search, Filter, ArrowUpRight, 
   Trash2, Edit3, UserCheck, PlusCircle, Check, X, Clipboard, 
-  Clock, Server, Bell, Key, Briefcase, FileSpreadsheet, Lock, HelpCircle, Eye, RefreshCw
+  Clock, Server, Bell, Key, Briefcase, FileSpreadsheet, Lock, HelpCircle, Eye, RefreshCw, Building2
 } from 'lucide-react';
 import { Ticket, TicketPriority, TicketStatus, UserAccount, SystemNotification } from '../types';
 import { INITIAL_USERS, INITIAL_EMPLOYEES, CATEGORY_COLORS } from '../mockData';
@@ -99,6 +99,13 @@ export default function AdminPortalView({
   const [newUserAvatar, setNewUserAvatar] = useState('');
   const [generatedPass, setGeneratedPass] = useState('');
   const [copiedSuccess, setCopiedSuccess] = useState(false);
+  const [newUserCompanyName, setNewUserCompanyName] = useState('');
+  const [newUserCompanyAddress, setNewUserCompanyAddress] = useState('');
+  const [newUserCompanyLogo, setNewUserCompanyLogo] = useState('');
+
+  const [editUserCompanyName, setEditUserCompanyName] = useState('');
+  const [editUserCompanyAddress, setEditUserCompanyAddress] = useState('');
+  const [editUserCompanyLogo, setEditUserCompanyLogo] = useState('');
   const [isResetPassOpen, setIsResetPassOpen] = useState(false);
   const [resetTargetUser, setResetTargetUser] = useState<UserAccount | null>(null);
 
@@ -206,7 +213,12 @@ export default function AdminPortalView({
         ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120'
         : 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=120'),
       password: generatedPass,
-      isFirstLogin: true
+      isFirstLogin: true,
+      company: newUserRole === 'user' ? {
+        name: newUserCompanyName,
+        address: newUserCompanyAddress,
+        logo: newUserCompanyLogo || undefined
+      } : undefined
     };
 
     try {
@@ -232,6 +244,9 @@ export default function AdminPortalView({
     setNewUserAvatar('');
     setGeneratedPass('');
     setCopiedSuccess(false);
+    setNewUserCompanyName('');
+    setNewUserCompanyAddress('');
+    setNewUserCompanyLogo('');
     setIsAddUserOpen(false);
   };
 
@@ -273,6 +288,9 @@ export default function AdminPortalView({
     setEditUserSpec(user.specialization || 'Cloud Infrastructure');
     setEditUserWorkload(user.currentWorkload || 0);
     setEditUserAvatar(user.avatar || '');
+    setEditUserCompanyName(user.company?.name || '');
+    setEditUserCompanyAddress(user.company?.address || '');
+    setEditUserCompanyLogo(user.company?.logo || '');
     setIsEditUserOpen(true);
   };
 
@@ -286,12 +304,20 @@ export default function AdminPortalView({
       department: editUserDept,
       specialization: editingUser.role === 'employee' ? editUserSpec : undefined,
       currentWorkload: editingUser.role === 'employee' ? editUserWorkload : undefined,
-      avatar: editUserAvatar || undefined
+      avatar: editUserAvatar || undefined,
+      company: editingUser.role === 'user' ? {
+        name: editUserCompanyName,
+        address: editUserCompanyAddress,
+        logo: editUserCompanyLogo || undefined
+      } : undefined
     };
 
     setAllUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...updates } : u));
     setIsEditUserOpen(false);
     setEditingUser(null);
+    setEditUserCompanyName('');
+    setEditUserCompanyAddress('');
+    setEditUserCompanyLogo('');
 
     try {
       await fetch(`/api/users/${editingUser.id}`, {
@@ -956,76 +982,129 @@ export default function AdminPortalView({
             </div>
 
             {/* Users list database table */}
-            <div className="rounded-2xl border border-white/10 overflow-hidden bg-white/[0.02] backdrop-blur-xl">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-white/10 bg-white/[0.03] text-slate-400 font-mono uppercase text-[9px]">
-                    <th className="p-4">Staff ID</th>
-                    <th className="p-4">Operator Name</th>
-                    <th className="p-4">Username</th>
-                    <th className="p-4">Email</th>
-                    <th className="p-4">Oversight Department</th>
-                    <th className="p-4">Telemetry Access State</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-slate-300 font-medium">
-                  {userAccounts.map((user) => (
-                    <tr key={user.id} className="hover:bg-white/[0.01] transition-all">
-                      <td className="p-4 font-mono text-slate-500">{user.id}</td>
-                      <td className="p-4 text-white font-bold flex items-center gap-2.5">
-                        <img
-                          src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120'}
-                          alt={user.name}
-                          className="w-7 h-7 rounded-full border border-[#6C63FF]/30 object-cover bg-slate-900"
-                        />
-                        <span>{user.name}</span>
-                      </td>
-                      <td className="p-4 font-mono text-cyan-400">@{user.username}</td>
-                      <td className="p-4 text-slate-300">{user.email}</td>
-                      <td className="p-4 text-slate-400 font-medium">{user.department}</td>
-                      <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold ${
-                          user.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                        }`}>
-                          {user.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right space-x-2">
-                        <button
-                          onClick={() => startEditUser(user)}
-                          className="p-1 px-2.5 rounded text-[10px] font-sans font-bold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 cursor-pointer transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleResetUserPassword(user)}
-                          className="p-1 px-2.5 rounded text-[10px] font-sans font-bold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 cursor-pointer transition-colors"
-                        >
-                          Reset Pass
-                        </button>
-                        <button
-                          onClick={() => handleToggleUserStatus(user.id, 'user')}
-                          className={`p-1 px-2.5 rounded text-[10px] font-mono font-bold cursor-pointer transition-colors ${
-                            user.status === 'active' 
-                              ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20' 
-                              : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20'
-                          }`}
-                        >
-                          {user.status === 'active' ? 'Deactivate' : 'Reactivate'}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="p-1 px-2 rounded text-[10px] font-sans font-bold bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 cursor-pointer transition-colors inline-block align-middle"
-                          title="Delete User Permanently"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-6">
+              {(() => {
+                const groupedUsers: { [companyName: string]: { name: string; address: string; logo?: string; users: UserAccount[] } } = {};
+                userAccounts.forEach(user => {
+                  const compName = user.company?.name || 'Individual Users';
+                  if (!groupedUsers[compName]) {
+                    groupedUsers[compName] = {
+                      name: compName,
+                      address: user.company?.address || 'No registered company address',
+                      logo: user.company?.logo || '',
+                      users: []
+                    };
+                  }
+                  groupedUsers[compName].users.push(user);
+                });
+
+                const groups = Object.values(groupedUsers);
+                if (groups.length === 0) {
+                  return (
+                    <div className="text-center py-12 border border-white/10 rounded-2xl bg-white/[0.02]">
+                      <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                      <p className="text-slate-500 font-medium text-xs">No user accounts found in telemetry database.</p>
+                    </div>
+                  );
+                }
+
+                return groups.map((group) => (
+                  <div key={group.name} className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl space-y-4">
+                    {/* Company Header Card */}
+                    <div className="flex items-center justify-between pb-3.5 border-b border-white/5 font-sans">
+                      <div className="flex items-center gap-3">
+                        {group.logo ? (
+                          <img src={group.logo} alt={group.name} className="w-9 h-9 rounded-xl object-contain bg-white/5 border border-white/10 p-1" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-sm font-extrabold text-white font-sans">{group.name}</h3>
+                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">{group.address}</p>
+                        </div>
+                      </div>
+                      <div className="px-2.5 py-0.5 rounded-lg bg-white/[0.04] border border-white/5 text-[9px] font-mono text-[#A78BFA]">
+                        {group.users.length} {group.users.length === 1 ? 'identity' : 'identities'}
+                      </div>
+                    </div>
+
+                    {/* Users table */}
+                    <div className="overflow-hidden rounded-xl border border-white/5 bg-black/10">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-white/5 bg-white/[0.02] text-slate-400 font-mono uppercase text-[8px]">
+                            <th className="p-3">Staff ID</th>
+                            <th className="p-3">Operator Name</th>
+                            <th className="p-3">Username</th>
+                            <th className="p-3">Email</th>
+                            <th className="p-3">Oversight Department</th>
+                            <th className="p-3">Telemetry Access State</th>
+                            <th className="p-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5 text-slate-300 font-medium">
+                          {group.users.map((user) => (
+                            <tr key={user.id} className="hover:bg-white/[0.01] transition-all">
+                              <td className="p-3 font-mono text-slate-500">{user.id}</td>
+                              <td className="p-3 text-white font-bold flex items-center gap-2">
+                                <img
+                                  src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120'}
+                                  alt={user.name}
+                                  className="w-6 h-6 rounded-full border border-[#6C63FF]/30 object-cover bg-slate-900"
+                                />
+                                <span>{user.name}</span>
+                              </td>
+                              <td className="p-3 font-mono text-cyan-400">@{user.username}</td>
+                              <td className="p-3 text-slate-300">{user.email}</td>
+                              <td className="p-3 text-slate-400 font-medium">{user.department}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[8px] font-mono font-bold ${
+                                  user.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                }`}>
+                                  {user.status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right space-x-2">
+                                <button
+                                  onClick={() => startEditUser(user)}
+                                  className="p-1 px-2.5 rounded text-[9px] font-sans font-bold bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 cursor-pointer transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleResetUserPassword(user)}
+                                  className="p-1 px-2.5 rounded text-[9px] font-sans font-bold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 cursor-pointer transition-colors"
+                                >
+                                  Reset Pass
+                                </button>
+                                <button
+                                  onClick={() => handleToggleUserStatus(user.id, 'user')}
+                                  className={`p-1 px-2.5 rounded text-[9px] font-mono font-bold cursor-pointer transition-colors ${
+                                    user.status === 'active' 
+                                      ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20' 
+                                      : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20'
+                                  }`}
+                                >
+                                  {user.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="p-1 px-2 rounded text-[9px] font-sans font-bold bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 cursor-pointer transition-colors inline-block align-middle"
+                                  title="Delete User Permanently"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         )}
@@ -1241,6 +1320,58 @@ export default function AdminPortalView({
                   </div>
                 </div>
 
+                {newUserRole === 'user' && (
+                  <div className="space-y-3 p-3 rounded-xl border border-white/5 bg-white/[0.01]">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-1">
+                      <span className="text-[10px] font-mono text-cyan-400 uppercase font-bold">Company Identity (Client)</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1 text-[10px] font-mono text-slate-400 uppercase font-bold">Company Name *</label>
+                        <input
+                          type="text"
+                          required={newUserRole === 'user'}
+                          value={newUserCompanyName}
+                          onChange={(e) => setNewUserCompanyName(e.target.value)}
+                          placeholder="e.g. SP IT"
+                          className="w-full p-2.5 rounded-lg border border-white/10 bg-white/[0.02] text-white focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1 text-[10px] font-mono text-slate-400 uppercase font-bold">Company Logo</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setNewUserCompanyLogo(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="w-full text-[9px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9px] file:bg-cyan-500/10 file:text-cyan-300 hover:file:bg-cyan-500/20 file:cursor-pointer cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[10px] font-mono text-slate-400 uppercase font-bold">Company Address *</label>
+                      <input
+                        type="text"
+                        required={newUserRole === 'user'}
+                        value={newUserCompanyAddress}
+                        onChange={(e) => setNewUserCompanyAddress(e.target.value)}
+                        placeholder="e.g. 12 Corporate Heights, Sector 4"
+                        className="w-full p-2.5 rounded-lg border border-white/10 bg-white/[0.02] text-white focus:outline-none focus:border-cyan-500/50"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {newUserRole === 'employee' && (
                   <div>
                     <label className="block mb-1 text-[10px] font-mono text-slate-400 uppercase font-bold">Workforce Specialization</label>
@@ -1401,6 +1532,58 @@ export default function AdminPortalView({
                     <option value="Hardware Dev">Hardware Dev</option>
                   </select>
                 </div>
+
+                {editingUser.role === 'user' && (
+                  <div className="space-y-3 p-3 rounded-xl border border-white/5 bg-white/[0.01]">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-1">
+                      <span className="text-[10px] font-mono text-cyan-400 uppercase font-bold">Company Identity (Client)</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1 text-[10px] font-mono text-slate-400 uppercase font-bold">Company Name *</label>
+                        <input
+                          type="text"
+                          required={editingUser.role === 'user'}
+                          value={editUserCompanyName}
+                          onChange={(e) => setEditUserCompanyName(e.target.value)}
+                          placeholder="e.g. SP IT"
+                          className="w-full p-2.5 rounded-lg border border-white/10 bg-white/[0.02] text-white focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1 text-[10px] font-mono text-slate-400 uppercase font-bold">Company Logo</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setEditUserCompanyLogo(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="w-full text-[9px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9px] file:bg-cyan-500/10 file:text-cyan-300 hover:file:bg-cyan-500/20 file:cursor-pointer cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[10px] font-mono text-slate-400 uppercase font-bold">Company Address *</label>
+                      <input
+                        type="text"
+                        required={editingUser.role === 'user'}
+                        value={editUserCompanyAddress}
+                        onChange={(e) => setEditUserCompanyAddress(e.target.value)}
+                        placeholder="e.g. 12 Corporate Heights, Sector 4"
+                        className="w-full p-2.5 rounded-lg border border-white/10 bg-white/[0.02] text-white focus:outline-none focus:border-cyan-500/50"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {editingUser.role === 'employee' && (
                   <>

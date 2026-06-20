@@ -4,7 +4,7 @@ import {
   PlusCircle, LayoutGrid, List, Search, Filter, Calendar, 
   Paperclip, Send, Smile, X, ArrowUpRight, CheckCircle2, 
   MessageSquare, Clock, ShieldCheck, HelpCircle, HardDrive, 
-  AlertTriangle, Eye, ArrowLeft, Download, Trash, FileText, Image as ImageIcon
+  AlertTriangle, Eye, ArrowLeft, Download, Trash, FileText, Image as ImageIcon, Building2
 } from 'lucide-react';
 import { Ticket, TicketPriority, TicketStatus, Attachment, TimelineMessage } from '../types';
 import { CATEGORY_COLORS } from '../mockData';
@@ -14,6 +14,11 @@ interface UserPortalViewProps {
   userName: string;
   userEmail: string;
   userAvatar?: string;
+  userCompany?: {
+    name: string;
+    address: string;
+    logo?: string;
+  };
   onLogout: () => void;
   onAddNewTicket: (newTicket: Ticket) => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
@@ -27,6 +32,7 @@ export default function UserPortalView({
   userName,
   userEmail,
   userAvatar,
+  userCompany,
   onLogout,
   onAddNewTicket,
   onUpdateTicketStatus,
@@ -374,24 +380,47 @@ export default function UserPortalView({
               </div>
 
               {/* User Identity */}
-              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-3">
-                {userAvatar ? (
-                  <img
-                    src={userAvatar}
-                    alt={userName}
-                    className="w-10 h-10 rounded-full border border-cyan-500/30 object-cover bg-slate-900"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-sm flex items-center justify-center border border-cyan-500/40">
-                    {getInitials(userName)}
+              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  {userAvatar ? (
+                    <img
+                      src={userAvatar}
+                      alt={userName}
+                      className="w-10 h-10 rounded-full border border-cyan-500/30 object-cover bg-slate-900"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-sm flex items-center justify-center border border-cyan-500/40">
+                      {getInitials(userName)}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs font-bold text-white truncate">{userName}</h4>
+                    <span className="text-[9px] font-mono bg-cyan-400/15 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-400/20 uppercase font-bold">
+                      User
+                    </span>
+                  </div>
+                </div>
+                {userCompany && userCompany.name && (
+                  <div className="mt-1 pt-2.5 border-t border-white/5 flex items-center gap-2 font-sans text-left">
+                    {userCompany.logo ? (
+                      <img
+                        src={userCompany.logo}
+                        alt={userCompany.name}
+                        className="w-7 h-7 rounded-lg object-contain bg-white/5 border border-white/10 p-0.5"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <Building2 className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold text-slate-200 truncate">{userCompany.name}</p>
+                      <p className="text-[8px] font-mono text-slate-500 truncate" title={userCompany.address}>
+                        {userCompany.address}
+                      </p>
+                    </div>
                   </div>
                 )}
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-bold text-white truncate">{userName}</h4>
-                  <span className="text-[9px] font-mono bg-cyan-400/15 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-400/20 uppercase font-bold">
-                    User
-                  </span>
-                </div>
               </div>
 
               {/* Navigation */}
@@ -483,24 +512,47 @@ export default function UserPortalView({
         </div>
 
         {/* User Identity profile details */}
-        <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-3">
-          {userAvatar ? (
-            <img
-              src={userAvatar}
-              alt={userName}
-              className="w-10 h-10 rounded-full border border-cyan-500/30 object-cover bg-slate-900"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-sm flex items-center justify-center border border-cyan-500/40">
-              {getInitials(userName)}
+        <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt={userName}
+                className="w-10 h-10 rounded-full border border-cyan-500/30 object-cover bg-slate-900"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-sm flex items-center justify-center border border-cyan-500/40">
+                {getInitials(userName)}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs font-bold text-white truncate">{userName}</h4>
+              <span className="text-[9px] font-mono bg-cyan-400/15 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-400/20 uppercase font-bold">
+                User
+              </span>
+            </div>
+          </div>
+          {userCompany && userCompany.name && (
+            <div className="mt-1 pt-2.5 border-t border-white/5 flex items-center gap-2 font-sans text-left">
+              {userCompany.logo ? (
+                <img
+                  src={userCompany.logo}
+                  alt={userCompany.name}
+                  className="w-7 h-7 rounded-lg object-contain bg-white/5 border border-white/10 p-0.5"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                  <Building2 className="w-3.5 h-3.5" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-slate-200 truncate">{userCompany.name}</p>
+                <p className="text-[8px] font-mono text-slate-500 truncate" title={userCompany.address}>
+                  {userCompany.address}
+                </p>
+              </div>
             </div>
           )}
-          <div className="min-w-0 flex-1">
-            <h4 className="text-xs font-bold text-white truncate">{userName}</h4>
-            <span className="text-[9px] font-mono bg-cyan-400/15 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-400/20 uppercase font-bold">
-              User
-            </span>
-          </div>
         </div>
 
         {/* Action Routes Layout Navigation */}

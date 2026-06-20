@@ -63,6 +63,11 @@ interface LoggedInUser {
   name: string;
   email: string;
   avatar?: string;
+  company?: {
+    name: string;
+    address: string;
+    logo?: string;
+  };
 }
 
 export default function App() {
@@ -196,7 +201,7 @@ export default function App() {
   }, [currentUser]);
 
   // Auth logins handler
-  const handleLoginSuccess = (role: UserRole, username: string, name: string, avatar?: string) => {
+  const handleLoginSuccess = (role: UserRole, username: string, name: string, avatar?: string, company?: any) => {
     // Generate logical corporate email mappings
     let email = `${username}@sandbox-sec.dev`;
     if (username.includes('alex')) email = 'a.wright@hyperplane.io';
@@ -208,7 +213,8 @@ export default function App() {
       username,
       name,
       email,
-      avatar
+      avatar,
+      company
     };
     localStorage.setItem('probsolver_auth_user', JSON.stringify(userObj));
     setCurrentUser(userObj);
@@ -592,6 +598,7 @@ export default function App() {
                 userName={currentUser.name}
                 userEmail={currentUser.email}
                 userAvatar={currentUser.avatar}
+                userCompany={currentUser.company}
                 onLogout={handleLogout}
                 onAddNewTicket={handleAddNewTicket}
                 onUpdateTicketStatus={handleUpdateTicketStatus}
