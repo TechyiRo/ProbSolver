@@ -24,6 +24,7 @@ interface UserPortalViewProps {
   onAddNewTicket: (newTicket: Ticket) => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
   onAddChatMessage: (ticketId: string, message: TimelineMessage) => void;
+  onDeleteChatMessage?: (ticketId: string, messageId: string) => void;
   notificationsCount: number;
   onOpenNotifications: () => void;
 }
@@ -38,6 +39,7 @@ export default function UserPortalView({
   onAddNewTicket,
   onUpdateTicketStatus,
   onAddChatMessage,
+  onDeleteChatMessage,
   notificationsCount,
   onOpenNotifications
 }: UserPortalViewProps) {
@@ -1139,7 +1141,7 @@ export default function UserPortalView({
 
         {/* SUBTAB 4 — SPLIT TICKET DETAILS & ACTION CHATS (Module 2D) */}
         {activeSubTab === 'chats' && (
-          <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch min-h-[500px]">
+          <div className="flex-1 flex flex-col lg:flex-row gap-6 items-stretch min-h-[700px]">
             {activeSelectedTicket ? (
               <>
                 {/* LEFT CONSOLE — TICKET DATA DETAILED SHEET */}
@@ -1257,7 +1259,7 @@ export default function UserPortalView({
                   )}
                 </div>
 
-                <div className="lg:w-5/12 max-h-[500px] h-[500px]">
+                <div className="lg:w-5/12 max-h-[700px] h-[700px]">
                   <TicketDetails
                     ticket={activeSelectedTicket}
                     onSendMessage={(ticketId, text) => {
@@ -1272,6 +1274,7 @@ export default function UserPortalView({
                     onUpdateStatus={(ticketId, status) => {
                       onUpdateTicketStatus(ticketId, status);
                     }}
+                    onDeleteMessage={onDeleteChatMessage}
                     currentUserName={userName}
                     currentUserRole="user"
                     isTyping={isTyping}

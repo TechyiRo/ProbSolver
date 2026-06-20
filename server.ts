@@ -472,6 +472,29 @@ app.post('/api/tickets/:id/timeline', async (req, res) => {
   }
 });
 
+// DELETE /api/tickets/:id/timeline/:messageId
+app.delete('/api/tickets/:id/timeline/:messageId', async (req, res) => {
+  try {
+    const { id, messageId } = req.params;
+    if (isDbConnected) {
+      const updatedTicket = await TicketModel.findOneAndUpdate(
+        { id } as any,
+        { $pull: { timeline: { id: messageId } } } as any,
+        { new: true } as any
+      );
+      if (!updatedTicket) return res.status(404).json({ error: "Ticket not found" });
+      res.json(updatedTicket);
+    } else {
+      const idx = localMemoryTickets.findIndex(t => t.id === id);
+      if (idx === -1) return res.status(404).json({ error: "Ticket not found" });
+      localMemoryTickets[idx].timeline = localMemoryTickets[idx].timeline.filter(m => m.id !== messageId);
+      res.json(localMemoryTickets[idx]);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // In-memory typing status store
 const typingStatus: Record<string, { agent: boolean; client: boolean }> = {};
 

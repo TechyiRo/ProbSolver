@@ -15,6 +15,7 @@ interface EmployeePortalViewProps {
   onLogout: () => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
   onAddChatMessage: (ticketId: string, message: TimelineMessage) => void;
+  onDeleteChatMessage?: (ticketId: string, messageId: string) => void;
   notificationsCount: number;
   onOpenNotifications: () => void;
 }
@@ -26,6 +27,7 @@ export default function EmployeePortalView({
   onLogout,
   onUpdateTicketStatus,
   onAddChatMessage,
+  onDeleteChatMessage,
   notificationsCount,
   onOpenNotifications
 }: EmployeePortalViewProps) {
@@ -450,7 +452,7 @@ export default function EmployeePortalView({
         </div>
 
         {/* RIGHT COLUMN: DETAILED DIAGNOSTIC SHEET + CHAT CHANNEL (xl:col-span-8) */}
-        <div className="flex-1 xl:w-8/12 flex flex-col lg:flex-row gap-6 h-[500px] min-h-[500px]">
+        <div className="flex-1 xl:w-8/12 flex flex-col lg:flex-row gap-6 h-[700px] min-h-[700px]">
           {activeSelectedTicket ? (
             <>
               {/* SPLIT 1 — DETAILED CONSOLE FILE */}
@@ -525,6 +527,7 @@ export default function EmployeePortalView({
                   onUpdateStatus={(ticketId, status) => {
                     onUpdateTicketStatus(ticketId, status);
                   }}
+                  onDeleteMessage={onDeleteChatMessage}
                   currentUserName={employeeName}
                   currentUserRole="employee"
                   isTyping={isClientTyping}

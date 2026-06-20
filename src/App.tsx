@@ -493,6 +493,26 @@ export default function App() {
     }
   };
 
+  const handleDeleteChatMessage = async (ticketId: string, messageId: string) => {
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId) {
+        return {
+          ...t,
+          timeline: t.timeline.filter(m => m.id !== messageId)
+        };
+      }
+      return t;
+    }));
+
+    try {
+      await fetch(`/api/tickets/${ticketId}/timeline/${messageId}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.error("MongoDB sync error deleting chat message:", err);
+    }
+  };
+
   // Delete/Archive Ticket
   const handleDeleteTicket = async (ticketId: string) => {
     setTickets(prev => prev.filter(t => t.id !== ticketId));
@@ -605,6 +625,7 @@ export default function App() {
                 onAddNewTicket={handleAddNewTicket}
                 onUpdateTicketStatus={handleUpdateTicketStatus}
                 onAddChatMessage={handleAddChatMessage}
+                onDeleteChatMessage={handleDeleteChatMessage}
                 notificationsCount={unreadNotificationsCount}
                 onOpenNotifications={() => setIsNotificationsOpen(true)}
               />
@@ -632,6 +653,7 @@ export default function App() {
                 onLogout={handleLogout}
                 onUpdateTicketStatus={handleUpdateTicketStatus}
                 onAddChatMessage={handleAddChatMessage}
+                onDeleteChatMessage={handleDeleteChatMessage}
                 notificationsCount={unreadNotificationsCount}
                 onOpenNotifications={() => setIsNotificationsOpen(true)}
               />

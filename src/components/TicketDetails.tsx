@@ -3,7 +3,7 @@ import { Ticket, TicketStatus } from '../types';
 import {
   Send, Sparkles, BadgeAlert, History, Smile, Paperclip,
   Mic, MicOff, FileText, Image as ImageIcon, X, Volume2, Play, Pause,
-  Clock, Pin, PinOff, StickyNote, Palette, ChevronDown, ChevronUp, User
+  Clock, Pin, PinOff, StickyNote, Palette, ChevronDown, ChevronUp, User, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -15,6 +15,7 @@ interface TicketDetailsProps {
   currentUserName?: string;
   currentUserRole?: 'admin' | 'employee' | 'user';
   isTyping?: boolean;
+  onDeleteMessage?: (ticketId: string, messageId: string) => void;
 }
 
 interface ChatNote {
@@ -106,7 +107,7 @@ function FileAttachmentBubble({ name }: { name: string }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, currentUserName, currentUserRole, isTyping }: TicketDetailsProps) {
+export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, currentUserName, currentUserRole, isTyping, onDeleteMessage }: TicketDetailsProps) {
   // ── Chat state ──────────────────────────────────────────────────────────────
   const [replyText, setReplyText]             = useState('');
   const [isAiDrafting, setIsAiDrafting]       = useState(false);
@@ -380,6 +381,9 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
             ? `${senderName} (You)`
             : senderName;
 
+          const msgAgeMs = Date.now() - new Date(msg.timestamp).getTime();
+          const isDeletable = isCurrentUser && msg.id && (msgAgeMs < 5 * 60 * 1000);
+
           return (
             <motion.div key={msg.id}
               initial={{ opacity: 0, x: isCurrentUser ? 20 : -20 }}
@@ -392,6 +396,18 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
                 <div className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-base leading-none bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 shadow-md">
                   {myAvatar && !isAgent ? myAvatar : senderName.charAt(0).toUpperCase()}
                 </div>
+              )}
+
+              {/* Delete message button (only active within 5 mins of sending) */}
+              {isDeletable && onDeleteMessage && (
+                <button
+                  onClick={() => onDeleteMessage(ticket.id, msg.id)}
+                  className="p-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-all cursor-pointer self-end mb-1 text-[9px] font-mono flex items-center gap-0.5 opacity-70 hover:opacity-100"
+                  title="Delete permanently (both sides)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
               )}
 
               <div className={`max-w-[76%] flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
@@ -557,7 +573,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
 
         {/* Note mode indicator */}
         <AnimatePresence>
-          {isNoteMode && currentUserRole === 'admin' && (
+          {isNoteMode && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-gradient-to-r ${noteColor.bg} ${noteColor.border} text-[10px]`}>
               <StickyNote className={`w-3 h-3 ${noteColor.text}`} />
@@ -585,13 +601,11 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
               className={`p-1.5 rounded-lg transition-all cursor-pointer ${showEmoji ? 'bg-amber-500/20 text-amber-300' : 'text-slate-500 hover:text-amber-300 hover:bg-white/5'}`} title="Emoji">
               <Smile className="w-4 h-4" />
             </button>
-            {/* Note mode toggle — Admin only */}
-            {currentUserRole === 'admin' && (
-              <button onClick={() => { setIsNoteMode(!isNoteMode); setShowEmoji(false); setShowAvatarPicker(false); }}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${isNoteMode ? 'bg-amber-500/20 text-amber-300' : 'text-slate-500 hover:text-amber-300 hover:bg-white/5'}`} title="Note mode">
-                <StickyNote className="w-4 h-4" />
-              </button>
-            )}
+            {/* Note mode toggle */}
+            <button onClick={() => { setIsNoteMode(!isNoteMode); setShowEmoji(false); setShowAvatarPicker(false); }}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${isNoteMode ? 'bg-amber-500/20 text-amber-300' : 'text-slate-500 hover:text-amber-300 hover:bg-white/5'}`} title="Note mode">
+              <StickyNote className="w-4 h-4" />
+            </button>
             {/* File attach */}
             <button onClick={() => fileInputRef.current?.click()}
               className="p-1.5 rounded-lg text-slate-500 hover:text-violet-300 hover:bg-white/5 transition-all cursor-pointer" title="Attach file">
