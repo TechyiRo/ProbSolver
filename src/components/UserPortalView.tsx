@@ -174,14 +174,16 @@ export default function UserPortalView({
       clientName: userName,
       clientEmail: userEmail,
       clientAvatar: userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
-      assigneeName: 'Elena Rostova', // Pre-assigning for high-fidelity response simulation
-      assigneeAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120',
+      assigneeName: 'Unassigned',
+      assigneeAvatar: '',
       timeline: [
         {
           id: `msg-${Date.now()}`,
           sender: 'client',
           text: ticketDesc,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          senderName: userName,
+          senderAvatar: userAvatar
         },
         {
           id: `msg-sys-${Date.now()}`,
@@ -1269,7 +1271,9 @@ export default function UserPortalView({
                         id: Date.now().toString(),
                         sender: 'client',
                         text,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        senderName: userName,
+                        senderAvatar: userAvatar
                       };
                       onAddChatMessage(ticketId, newMsg);
                     }}

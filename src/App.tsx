@@ -454,8 +454,12 @@ export default function App() {
   const handleAddChatMessage = async (ticketId: string, message: TimelineMessage) => {
     setTickets(prev => prev.map(t => {
       if (t.id === ticketId) {
+        const isUnassigned = !t.assigneeName || t.assigneeName === 'Unassigned';
+        const shouldAssign = message.sender === 'agent' && isUnassigned && message.senderName;
         return {
           ...t,
+          assigneeName: shouldAssign ? message.senderName! : t.assigneeName,
+          assigneeAvatar: shouldAssign ? (message.senderAvatar || t.assigneeAvatar) : t.assigneeAvatar,
           timeline: [...t.timeline, message]
         };
       }

@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Briefcase, Search, Filter, MessageSquare, Send, CheckCircle2, 
   Clock, AlertTriangle, Paperclip, Smile, FileText, Image as ImageIcon, 
-  Download, FileCheck, HelpCircle, ArrowLeft, RefreshCw, X, ChevronRight, PlayCircle
+  Download, FileCheck, HelpCircle, ArrowLeft, RefreshCw, X, ChevronRight, PlayCircle, Building2
 } from 'lucide-react';
-import { Ticket, TicketPriority, TicketStatus, TimelineMessage, Attachment } from '../types';
+import { Ticket, TicketPriority, TicketStatus, TimelineMessage, Attachment, UserAccount } from '../types';
 import TicketDetails from './TicketDetails';
 
 interface EmployeePortalViewProps {
@@ -46,6 +46,58 @@ export default function EmployeePortalView({
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const [isClientTyping, setIsClientTyping] = useState(false);
   const typingTimerRef = useRef<any>(null);
+
+  // User Accounts list to match companies
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  useEffect(() => {
+    fetch('/api/users')
+      .then(res => res.json())
+      .then(data => setUsers(data))
+      .catch(err => console.error("Error loading users for company mapping:", err));
+  }, []);
+
+  // Helper to get company details for a ticket client
+  const getTicketCompany = (ticket: Ticket) => {
+    const user = users.find(u => 
+      u.email.toLowerCase() === ticket.clientEmail.toLowerCase() || 
+      u.name.toLowerCase() === ticket.clientName.toLowerCase()
+    );
+    if (user && user.company && user.company.name) {
+      return {
+        name: user.company.name,
+        address: user.company.address || 'Corporate Headquarters',
+        logo: user.company.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.company.name)}&background=4C1D95&color=A78BFA&bold=true&size=64&font-size=0.38`
+      };
+    }
+
+    if (ticket.clientEmail && ticket.clientEmail.includes('@')) {
+      const domain = ticket.clientEmail.split('@')[1];
+      const companyPart = domain.split('.')[0];
+      const formattedName = companyPart
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      
+      let cleanName = formattedName;
+      if (domain.includes('hyperplane')) cleanName = 'Hyperplane IO';
+      else if (domain.includes('clarity-analytics')) cleanName = 'Clarity Analytics';
+      else if (domain.includes('quant-labs')) cleanName = 'Quant Labs SG';
+      else if (domain.includes('cognitivesystems')) cleanName = 'Cognitive Systems Tech';
+      else if (domain.includes('devbox-hq')) cleanName = 'Devbox HQ';
+
+      return {
+        name: cleanName,
+        address: 'Corporate Headquarters',
+        logo: `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=4C1D95&color=A78BFA&bold=true&size=64&font-size=0.38`
+      };
+    }
+
+    return {
+      name: 'External Contractor',
+      address: 'Remote',
+      logo: `https://ui-avatars.com/api/?name=External+Contractor&background=4C1D95&color=A78BFA&bold=true&size=64&font-size=0.38`
+    };
+  };
 
   // Poll client typing status of the active ticket
   useEffect(() => {
@@ -110,7 +162,7 @@ export default function EmployeePortalView({
   };
 
   const employeeAssignedTickets = tickets.filter(t => 
-    t.assigneeName === employeeName || t.assigneeName.toLowerCase().includes('elena')
+    t.assigneeName === employeeName || t.assigneeName === 'Unassigned' || t.assigneeName.toLowerCase().includes('elena')
   );
 
   const filteredTickets = employeeAssignedTickets.filter(t => {
@@ -125,6 +177,51 @@ export default function EmployeePortalView({
   });
 
   const activeSelectedTicket = tickets.find(t => t.id === selectedTicketId) || null;
+
+  // Grouped tickets calculation
+  interface CompanyGroup {
+    companyName: string;
+    companyLogo: string;
+    companyAddress: string;
+    tickets: Ticket[];
+  }
+
+  const groupedTickets = useMemo(() => {
+    const groups: Record<string, CompanyGroup> = {};
+    
+    filteredTickets.forEach(t => {
+      const comp = getTicketCompany(t);
+      if (!groups[comp.name]) {
+        groups[comp.name] = {
+          companyName: comp.name,
+          companyLogo: comp.logo,
+          companyAddress: comp.address,
+          tickets: []
+        };
+      }
+      groups[comp.name].tickets.push(t);
+    });
+    
+    return Object.values(groups);
+  }, [filteredTickets, users]);
+
+  // Accordion state
+  const [expandedCompanies, setExpandedCompanies] = useState<Record<string, boolean>>({});
+  const [hasInteracted, setHasInteracted] = useState(false);
+
+  useEffect(() => {
+    if (!hasInteracted && groupedTickets.length > 0) {
+      setExpandedCompanies({ [groupedTickets[0].companyName]: true });
+    }
+  }, [groupedTickets, hasInteracted]);
+
+  const toggleCompany = (companyName: string) => {
+    setHasInteracted(true);
+    setExpandedCompanies(prev => ({
+      ...prev,
+      [companyName]: !prev[companyName]
+    }));
+  };
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -365,7 +462,7 @@ export default function EmployeePortalView({
         <div className="xl:w-4/12 flex flex-col gap-4">
           <div>
             <h2 className="text-xl font-extrabold text-[#F1F5F9] font-sans tracking-tight">Incident Assignment Queue</h2>
-            <p className="text-slate-400 text-xs mt-0.5">SLA-bound diagnostics assigned under Elena Rostova</p>
+            <p className="text-slate-400 text-xs mt-0.5">SLA-bound diagnostics assigned under {employeeName}</p>
           </div>
 
           {/* Compact filters */}
@@ -409,44 +506,152 @@ export default function EmployeePortalView({
           </div>
 
           {/* Cards Stack list */}
-          {filteredTickets.length === 0 ? (
+          {groupedTickets.length === 0 ? (
             <div className="p-8 text-center border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
               <HelpCircle className="w-8 h-8 text-slate-600 mx-auto mb-2 animate-pulse" />
               <p className="text-xs text-slate-500 font-mono">No incident diagnostic maps verified.</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-              {filteredTickets.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => setSelectedTicketId(t.id)}
-                  className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-3 relative ${
-                    selectedTicketId === t.id 
-                      ? 'bg-amber-950/10 border-amber-500/40 shadow-lg' 
-                      : 'bg-white/[0.02] border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-amber-400">{t.id}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[8.5px] uppercase font-mono font-extrabold ${
-                      t.status === 'open' ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20' :
-                      t.status === 'in_progress' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' :
-                      t.status === 'resolved' ? 'bg-[#10B981]/10 text-emerald-300 border border-[#10B981]/20' :
-                      'bg-slate-500/10 text-slate-400'
-                    }`}>
-                      {t.status}
-                    </span>
-                  </div>
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+              {groupedTickets.map((group) => (
+                <div key={group.companyName} className="space-y-2">
+                  {/* 3D Glassmorphic Company Card */}
+                  <motion.div
+                    whileHover={{ scale: 1.02, y: -2, rotateX: 1, rotateY: -1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                    className="relative p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] backdrop-blur-md shadow-lg overflow-hidden cursor-pointer group"
+                    onClick={() => toggleCompany(group.companyName)}
+                    style={{ transformStyle: 'preserve-3d', perspective: 1000 }}
+                  >
+                    {/* Glass glow border gradient highlight */}
+                    <div className="absolute -inset-px bg-gradient-to-tr from-violet-600/15 via-transparent to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
+                    
+                    <div className="flex items-center gap-3">
+                      {/* Company Logo or Initials */}
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 p-0.5 flex items-center justify-center shadow-inner shrink-0 overflow-hidden group-hover:border-violet-500/30 transition-colors">
+                        <img
+                          src={group.companyLogo}
+                          className="w-full h-full rounded-lg object-cover"
+                          referrerPolicy="no-referrer"
+                          alt={group.companyName}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.onerror = null;
+                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(group.companyName)}&background=4C1D95&color=A78BFA&bold=true&size=64&font-size=0.38`;
+                          }}
+                        />
+                      </div>
 
-                  <div>
-                    <h4 className="text-xs font-bold text-white line-clamp-1 truncate">{t.title}</h4>
-                    <p className="text-[10px] text-slate-400 line-clamp-2 mt-1 leading-snug">{t.description}</p>
-                  </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xs font-bold text-white group-hover:text-[#A78BFA] transition-colors truncate">{group.companyName}</h3>
+                        <p className="text-[9px] font-mono text-slate-500 truncate mt-0.5">{group.companyAddress}</p>
+                      </div>
 
-                  <div className="flex justify-between items-center pt-2.5 border-t border-white/5 text-[9px] font-mono text-slate-500">
-                    <span className="truncate">Client: <span className="font-bold text-slate-300">{t.clientName}</span></span>
-                    <span className="capitalize text-rose-300 font-bold">{t.priority}</span>
-                  </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/25 text-[8.5px] font-mono font-bold text-[#A78BFA]">
+                          {group.tickets.length} {group.tickets.length === 1 ? 'case' : 'cases'}
+                        </span>
+                        <motion.div
+                          animate={{ rotate: expandedCompanies[group.companyName] ? 90 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white" />
+                        </motion.div>
+                      </div>
+                    </div>
+
+                    {/* Avatar stack of queue creators */}
+                    <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-white/5">
+                      <span className="text-[8px] font-mono text-slate-500 font-bold uppercase tracking-wider">Queue Creators:</span>
+                      <div className="flex -space-x-1.5 overflow-hidden">
+                        {Array.from(new Set(group.tickets.map(t => t.clientEmail))).map(email => {
+                          const ticket = group.tickets.find(t => t.clientEmail === email);
+                          if (!ticket) return null;
+                          const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.clientName)}&background=1e1b4b&color=a78bfa&bold=true&size=64`;
+                          return (
+                            <img 
+                              key={email}
+                              src={ticket.clientAvatar || fallbackAvatar} 
+                              title={ticket.clientName}
+                              className="inline-block h-5 w-5 rounded-full ring-1 ring-violet-500/30 object-cover bg-slate-800"
+                              referrerPolicy="no-referrer"
+                              alt={ticket.clientName}
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                target.onerror = null;
+                                target.src = fallbackAvatar;
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Expanded Tickets Sub-Queue list */}
+                  <AnimatePresence initial={false}>
+                    {expandedCompanies[group.companyName] && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="overflow-hidden space-y-2 mt-1.5 pl-2.5 border-l border-white/10 ml-4.5"
+                      >
+                        {group.tickets.map(t => (
+                          <div
+                            key={t.id}
+                            onClick={() => setSelectedTicketId(t.id)}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-2.5 relative ${
+                              selectedTicketId === t.id 
+                                ? 'bg-amber-950/10 border-amber-500/40 shadow-lg' 
+                                : 'bg-white/[0.01] border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="text-[9px] font-mono font-bold text-amber-400">{t.id}</span>
+                              <span className={`px-1.5 py-0.5 rounded-full text-[7.5px] uppercase font-mono font-extrabold ${
+                                t.status === 'open' ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20' :
+                                t.status === 'in_progress' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' :
+                                t.status === 'resolved' ? 'bg-[#10B981]/10 text-emerald-300 border border-[#10B981]/20' :
+                                'bg-slate-500/10 text-slate-400'
+                              }`}>
+                                {t.status}
+                              </span>
+                            </div>
+
+                            {/* Creator User details */}
+                            <div className="flex items-center gap-1.5">
+                              <img
+                                src={t.clientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.clientName)}&background=1e1b4b&color=a78bfa&bold=true&size=48`}
+                                className="w-5 h-5 rounded-full object-cover ring-1 ring-violet-500/30 bg-slate-800"
+                                alt={t.clientName}
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  target.onerror = null;
+                                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(t.clientName)}&background=1e1b4b&color=a78bfa&bold=true&size=48`;
+                                }}
+                              />
+                              <span className="text-[9px] font-mono text-slate-400 truncate">
+                                User: <span className="font-bold text-slate-200">{t.clientName}</span>
+                              </span>
+                            </div>
+
+                            <div>
+                              <h4 className="text-[11px] font-bold text-slate-200 line-clamp-1 truncate">{t.title}</h4>
+                              <p className="text-[9.5px] text-slate-500 line-clamp-2 leading-relaxed mt-0.5">{t.description}</p>
+                            </div>
+
+                            <div className="flex justify-between items-center pt-2 border-t border-white/5 text-[8.5px] font-mono text-slate-500">
+                              <span>Priority: <span className="capitalize text-rose-400 font-bold">{t.priority}</span></span>
+                              <span>{new Date(t.date).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ))}
             </div>
@@ -522,7 +727,9 @@ export default function EmployeePortalView({
                       id: Date.now().toString(),
                       sender: 'agent',
                       text,
-                      timestamp: new Date().toISOString()
+                      timestamp: new Date().toISOString(),
+                      senderName: employeeName,
+                      senderAvatar: employeeAvatar
                     };
                     onAddChatMessage(ticketId, newMsg);
                   }}

@@ -107,6 +107,16 @@ function FileAttachmentBubble({ name }: { name: string }) {
   );
 }
 
+// Helper to render image or emoji avatar content safely
+function renderAvatarContent(avatarValue: string | undefined, fallback: React.ReactNode) {
+  if (!avatarValue) return fallback;
+  const isUrl = avatarValue.startsWith('http://') || avatarValue.startsWith('https://') || avatarValue.startsWith('/') || avatarValue.startsWith('data:');
+  if (isUrl) {
+    return <img src={avatarValue} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" alt="avatar" />;
+  }
+  return <span className="text-base leading-none select-none">{avatarValue}</span>;
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, currentUserName, currentUserRole, isTyping, onDeleteMessage, onMarkSeen }: TicketDetailsProps) {
   // ── Chat state ──────────────────────────────────────────────────────────────
@@ -370,13 +380,6 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
           <span className="text-xs font-medium text-slate-300 truncate max-w-[100px]">{ticket.title}</span>
         </div>
         <div className="flex items-center gap-2">
-          {onMarkSeen && (
-            <button onClick={() => onMarkSeen(ticket.id, currentUserRole || 'user')}
-              className="px-2 py-1 rounded-lg text-[9px] font-mono font-bold border border-cyan-500/25 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 cursor-pointer transition-all hover:scale-105"
-              title="Toggle all counterpart messages to Seen state">
-              ✓✓ Seen Toggle
-            </button>
-          )}
           <div className="flex items-center gap-1 bg-black/20 p-0.5 rounded-xl border border-white/5">
             {(['open','in_progress','resolved'] as TicketStatus[]).map(st => {
               const cfg = statusConfig[st];
@@ -481,7 +484,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
 
           const isAgent   = msg.sender === 'agent';
           const isCurrentUser = currentUserRole !== 'user' ? isAgent : !isAgent;
-          const senderName = isAgent ? agentDisplayName : clientDisplayName;
+          const senderName = msg.senderName || (isAgent ? agentDisplayName : clientDisplayName);
           const style = getSenderStyle(senderName);
 
           const isVoice   = msg.text.startsWith('🎤 Voice note');
@@ -506,8 +509,8 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
 
               {/* Left avatar */}
               {!isCurrentUser && (
-                <div className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-base leading-none bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 shadow-md">
-                  {myAvatar && !isAgent ? myAvatar : senderName.charAt(0).toUpperCase()}
+                <div className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-base leading-none bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 shadow-md overflow-hidden">
+                  {renderAvatarContent(msg.senderAvatar, myAvatar && !isAgent ? myAvatar : senderName.charAt(0).toUpperCase())}
                 </div>
               )}
 
@@ -558,8 +561,8 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
 
               {/* Right avatar (current user) */}
               {isCurrentUser && (
-                <div className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-base leading-none bg-gradient-to-br from-[#6C63FF] to-[#A78BFA] shadow-lg shadow-violet-500/20 border border-[#A78BFA]/30 text-white">
-                  {myAvatar}
+                <div className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-base leading-none bg-gradient-to-br from-[#6C63FF] to-[#A78BFA] shadow-lg shadow-violet-500/20 border border-[#A78BFA]/30 text-white overflow-hidden">
+                  {renderAvatarContent(msg.senderAvatar, myAvatar)}
                 </div>
               )}
             </motion.div>
@@ -607,7 +610,7 @@ export default function TicketDetails({ ticket, onSendMessage, onUpdateStatus, c
           <div className="flex justify-start">
             <div className="p-3 rounded-xl scale-95 origin-left bg-white/[0.04] border border-white/10 text-slate-100 rounded-tl-none flex items-center gap-1.2">
               <span className="text-[9px] font-mono text-slate-500 mr-1.5">
-                {currentUserRole === 'user' ? 'Elena is typing' : 'Client is typing'}
+                {currentUserRole === 'user' ? `${agentDisplayName} is typing` : `${clientDisplayName} is typing`}
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-bounce" style={{ animationDelay: '0s' }} />
               <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA] animate-bounce" style={{ animationDelay: '0.2s' }} />

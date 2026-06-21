@@ -235,10 +235,15 @@ export default function TicketQueue({
                       <div className="flex items-center gap-4 mt-2.5 text-[10px] font-mono text-slate-500">
                         <div className="flex items-center gap-1.5">
                           <img 
-                            src={ticket.clientAvatar} 
+                            src={ticket.clientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.clientName)}&background=1e1b4b&color=a78bfa&bold=true&size=48`}
                             alt={ticket.clientName} 
-                            className="w-3.5 h-3.5 rounded-full object-cover"
+                            className="w-3.5 h-3.5 rounded-full object-cover bg-slate-800"
                             referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.onerror = null;
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ticket.clientName)}&background=1e1b4b&color=a78bfa&bold=true&size=48`;
+                            }}
                           />
                           <span className="text-slate-300 font-medium truncate max-w-[100px]">{ticket.clientName}</span>
                         </div>

@@ -48,7 +48,9 @@ const TimelineMessageSchema = new mongoose.Schema({
   sender: { type: String, required: true, enum: ['client', 'agent', 'system'] },
   text: { type: String, required: true },
   timestamp: { type: String, required: true },
-  seen: { type: Boolean, default: false }
+  seen: { type: Boolean, default: false },
+  senderName: { type: String },
+  senderAvatar: { type: String }
 });
 
 const TicketSchema = new mongoose.Schema({
@@ -60,7 +62,7 @@ const TicketSchema = new mongoose.Schema({
   status: { type: String, required: true, enum: ['open', 'in_progress', 'pending', 'resolved', 'closed'] },
   clientName: { type: String, required: true },
   clientEmail: { type: String, required: true },
-  assigneeName: { type: String, default: 'Elena Rostova' },
+  assigneeName: { type: String, default: 'Unassigned' },
   assigneeAvatar: { type: String, default: '' },
   date: { type: String, required: true },
   internalNotes: { type: [String], default: [] },
@@ -455,17 +457,27 @@ app.post('/api/tickets/:id/timeline', async (req, res) => {
     const { id } = req.params;
     const message = req.body;
     if (isDbConnected) {
-      const updatedTicket = await TicketModel.findOneAndUpdate(
-        { id } as any,
-        { $push: { timeline: message } } as any,
-        { new: true } as any
-      );
-      if (!updatedTicket) return res.status(404).json({ error: "Ticket not found" });
-      res.json(updatedTicket);
+      const ticket = await TicketModel.findOne({ id } as any);
+      if (!ticket) return res.status(404).json({ error: "Ticket not found" });
+      ticket.timeline.push(message);
+      if (message.sender === 'agent' && (!ticket.assigneeName || ticket.assigneeName === 'Unassigned') && message.senderName) {
+        ticket.assigneeName = message.senderName;
+        if (message.senderAvatar) {
+          ticket.assigneeAvatar = message.senderAvatar;
+        }
+      }
+      await ticket.save();
+      res.json(ticket);
     } else {
       const idx = localMemoryTickets.findIndex(t => t.id === id);
       if (idx === -1) return res.status(404).json({ error: "Ticket not found" });
       localMemoryTickets[idx].timeline.push(message);
+      if (message.sender === 'agent' && (!localMemoryTickets[idx].assigneeName || localMemoryTickets[idx].assigneeName === 'Unassigned') && message.senderName) {
+        localMemoryTickets[idx].assigneeName = message.senderName;
+        if (message.senderAvatar) {
+          localMemoryTickets[idx].assigneeAvatar = message.senderAvatar;
+        }
+      }
       res.json(localMemoryTickets[idx]);
     }
   } catch (err: any) {
