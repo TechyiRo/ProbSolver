@@ -4,11 +4,160 @@ import {
   PlusCircle, LayoutGrid, List, Search, Filter, Calendar, 
   Paperclip, Send, Smile, X, ArrowUpRight, CheckCircle2, 
   MessageSquare, Clock, ShieldCheck, HelpCircle, HardDrive, 
-  AlertTriangle, Eye, ArrowLeft, Download, Trash, FileText, Image as ImageIcon, Building2
+  AlertTriangle, Eye, ArrowLeft, Download, Trash, FileText, Image as ImageIcon, Building2,
+  Plus, Check, Briefcase, Cpu
 } from 'lucide-react';
 import { Ticket, TicketPriority, TicketStatus, Attachment, TimelineMessage } from '../types';
 import { CATEGORY_COLORS } from '../mockData';
 import TicketDetails from './TicketDetails';
+
+// ── LocalStorage keys ────────────────────────────────────────────────────────
+const LS_CATEGORIES_KEY = 'probsolver_ticket_categories';
+const LS_DEPARTMENTS_KEY  = 'probsolver_ticket_departments';
+
+const BASE_CATEGORIES  = ['Hardware', 'Software', 'Network', 'Access', 'Cloud', 'Security', 'Other'];
+const BASE_DEPARTMENTS = ['IT', 'HR', 'Finance', 'Operations', 'Marketing', 'Legal', 'Support'];
+
+function loadSavedOptions(key: string, base: string[]): string[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return base;
+    const saved: string[] = JSON.parse(raw);
+    const merged = [...base];
+    saved.forEach(s => { if (!merged.includes(s)) merged.push(s); });
+    return merged;
+  } catch { return base; }
+}
+
+function saveOption(key: string, base: string[], value: string) {
+  if (base.includes(value)) return;
+  try {
+    const raw = localStorage.getItem(key);
+    const existing: string[] = raw ? JSON.parse(raw) : [];
+    if (!existing.includes(value)) {
+      localStorage.setItem(key, JSON.stringify([...existing, value]));
+    }
+  } catch {}
+}
+
+// ── Inline ComboBox with custom entry + localStorage persistence ──────────────
+function TicketComboBox({
+  value,
+  onChange,
+  options,
+  lsKey,
+  baseOptions,
+  placeholder,
+  icon: Icon,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  lsKey: string;
+  baseOptions: string[];
+  placeholder?: string;
+  icon?: React.ElementType;
+}) {
+  const [open, setOpen] = useState(false);
+  const [customText, setCustomText] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropRef  = useRef<HTMLDivElement>(null);
+  const isCustom = value && !baseOptions.includes(value);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSelect = (opt: string) => {
+    onChange(opt);
+    setOpen(false);
+    setCustomText('');
+  };
+
+  const handleAddCustom = () => {
+    const trimmed = customText.trim();
+    if (!trimmed) return;
+    saveOption(lsKey, baseOptions, trimmed);
+    onChange(trimmed);
+    setOpen(false);
+    setCustomText('');
+  };
+
+  return (
+    <div className="relative" ref={dropRef}>
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setTimeout(() => inputRef.current?.focus(), 60); }}
+        className="w-full flex items-center gap-2 p-3 text-xs font-sans rounded-xl border border-white/10 bg-[#0f1129] text-white focus:outline-none hover:border-[#6C63FF]/50 transition-all text-left relative group"
+      >
+        {Icon && <Icon className="w-4 h-4 text-slate-500 shrink-0" />}
+        <span className={`flex-1 truncate ${value ? 'text-white' : 'text-slate-500'}`}>{value || placeholder || 'Select...'}</span>
+        {isCustom && (
+          <span className="text-[8px] font-mono text-violet-400 uppercase font-bold tracking-wider bg-violet-500/10 px-1.5 py-0.5 rounded border border-violet-500/20">Custom</span>
+        )}
+        <svg className={`w-3.5 h-3.5 text-slate-500 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 mt-1.5 w-full rounded-xl border border-white/10 bg-[#0d1022]/98 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden"
+          >
+            <div className="max-h-48 overflow-y-auto">
+              {options.map(opt => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => handleSelect(opt)}
+                  className={`w-full px-4 py-2.5 text-left text-xs transition-colors flex items-center gap-2 ${
+                    value === opt ? 'bg-violet-600/20 text-violet-300 font-bold' : 'text-slate-300 hover:bg-white/5'
+                  }`}
+                >
+                  {value === opt && <Check className="w-3 h-3 text-violet-400 shrink-0" />}
+                  <span className={value === opt ? 'ml-0' : 'ml-5'}>{opt}</span>
+                  {!baseOptions.includes(opt) && (
+                    <span className="ml-auto text-[8px] font-mono text-violet-400/60 bg-violet-500/10 px-1 py-0.5 rounded">saved</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="border-t border-white/5 p-2.5">
+              <div className="flex gap-1.5">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={customText}
+                  onChange={e => setCustomText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustom(); } }}
+                  placeholder="Add custom option..."
+                  className="flex-1 px-3 py-2 text-xs rounded-lg border border-white/10 bg-white/[0.04] text-white placeholder-slate-500 focus:outline-none focus:border-[#6C63FF] transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustom}
+                  disabled={!customText.trim()}
+                  className="p-2 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-300 hover:bg-violet-600/40 disabled:opacity-40 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <p className="text-[8.5px] text-slate-500 font-mono mt-1.5 px-0.5">Type a custom value and press Enter or + to add. Saved for next time.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 interface UserPortalViewProps {
   tickets: Ticket[];
@@ -67,6 +216,22 @@ export default function UserPortalView({
   const [attachedFiles, setAttachedFiles] = useState<Attachment[]>([]);
   const [formError, setFormError] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
+
+  // Custom category/dept options (loaded from localStorage, merged with base)
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(() => loadSavedOptions(LS_CATEGORIES_KEY, BASE_CATEGORIES));
+  const [deptOptions, setDeptOptions] = useState<string[]>(() => loadSavedOptions(LS_DEPARTMENTS_KEY, BASE_DEPARTMENTS));
+
+  const handleCategoryChange = (val: string) => {
+    setTicketCategory(val);
+    saveOption(LS_CATEGORIES_KEY, BASE_CATEGORIES, val);
+    setCategoryOptions(loadSavedOptions(LS_CATEGORIES_KEY, BASE_CATEGORIES));
+  };
+
+  const handleDeptChange = (val: string) => {
+    setTicketDept(val);
+    saveOption(LS_DEPARTMENTS_KEY, BASE_DEPARTMENTS, val);
+    setDeptOptions(loadSavedOptions(LS_DEPARTMENTS_KEY, BASE_DEPARTMENTS));
+  };
 
   // Live chat state
   const [chatInput, setChatInput] = useState('');
@@ -769,40 +934,34 @@ export default function UserPortalView({
 
                 {/* Grid Inputs */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Category dropdown */}
+                  {/* Category — combobox with custom add */}
                   <div>
-                    <label className="block mb-1.5 text-[10px] font-mono text-slate-400 uppercase tracking-wider font-semibold">
-                      Diagnostic Category *
+                    <label className="block mb-1.5 text-[10px] font-mono text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1">
+                      <Cpu className="w-3 h-3" /> Diagnostic Category *
                     </label>
-                    <select
+                    <TicketComboBox
                       value={ticketCategory}
-                      onChange={(e) => setTicketCategory(e.target.value)}
-                      className="w-full p-3 rounded-xl border border-white/10 bg-[#0f1129] text-white focus:outline-none focus:border-[#6C63FF] transition-all cursor-pointer"
-                    >
-                      <option value="Hardware">Hardware Diagnostics</option>
-                      <option value="Software">Core Software Software</option>
-                      <option value="Network">Network & Fiber Links</option>
-                      <option value="Access">Access Permissions / SAML</option>
-                      <option value="Other">Standard Inquiries</option>
-                    </select>
+                      onChange={handleCategoryChange}
+                      options={categoryOptions}
+                      lsKey={LS_CATEGORIES_KEY}
+                      baseOptions={BASE_CATEGORIES}
+                      placeholder="Select or add category..."
+                    />
                   </div>
 
-                  {/* Department */}
+                  {/* Department — combobox with custom add */}
                   <div>
-                    <label className="block mb-1.5 text-[10px] font-mono text-slate-400 uppercase tracking-wider font-semibold">
-                      Department Allocation
+                    <label className="block mb-1.5 text-[10px] font-mono text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1">
+                      <Briefcase className="w-3 h-3" /> Department Allocation
                     </label>
-                    <select
+                    <TicketComboBox
                       value={ticketDept}
-                      onChange={(e) => setTicketDept(e.target.value)}
-                      className="w-full p-3 rounded-xl border border-white/10 bg-[#0f1129] text-white focus:outline-none focus:border-[#6C63FF] transition-all cursor-pointer"
-                    >
-                      <option value="IT">IT Infrastructure</option>
-                      <option value="HR">Human Resources</option>
-                      <option value="Finance">Finance Oversight</option>
-                      <option value="Operations">Operations Department</option>
-                      <option value="Management">Global Management</option>
-                    </select>
+                      onChange={handleDeptChange}
+                      options={deptOptions}
+                      lsKey={LS_DEPARTMENTS_KEY}
+                      baseOptions={BASE_DEPARTMENTS}
+                      placeholder="Select or add department..."
+                    />
                   </div>
 
                   {/* Expected resolution date */}
