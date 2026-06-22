@@ -35,22 +35,30 @@ MONGODB_URI = MONGODB_URI.trim().replace(/^['"]|['"]$/g, '');
 
 dbConnectionStringUsed = MONGODB_URI.replace(/:([^@]+)@/, ":******@"); // Obfuscate password in UI/logs
 
-// Connect asynchronously to prevent blocking server launch or causing timeouts
-mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000,   // fail fast if Atlas is unreachable
-  socketTimeoutMS: 30000,           // don't hold sockets open too long
-  maxPoolSize: 10,                  // max concurrent connections in pool
-  minPoolSize: 2,                   // keep 2 connections warm to avoid cold connects
-  heartbeatFrequencyMS: 10000,      // check connection health every 10s
-} as any)
-  .then(() => {
-    console.log("Successfully established secure connection tunnel with MongoDB cluster");
-    isDbConnected = true;
-  })
-  .catch((err: any) => {
-    console.error("MongoDB Cluster Connection warning:", err);
-    dbErrorMessage = err.message || String(err);
-  });
+// For Vercel Serverless: cache the connection across warm boots
+let cachedConnection = (global as any).mongooseConnection;
+
+if (!cachedConnection) {
+  cachedConnection = mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000,   // fail fast if Atlas is unreachable
+    socketTimeoutMS: 30000,           // don't hold sockets open too long
+    maxPoolSize: 10,                  // max concurrent connections in pool
+    minPoolSize: 2,                   // keep 2 connections warm to avoid cold connects
+    heartbeatFrequencyMS: 10000,      // check connection health every 10s
+  } as any)
+    .then(() => {
+      console.log("Successfully established secure connection tunnel with MongoDB cluster");
+      isDbConnected = true;
+    })
+    .catch((err: any) => {
+      console.error("MongoDB Cluster Connection warning:", err);
+      dbErrorMessage = err.message || String(err);
+    });
+  
+  (global as any).mongooseConnection = cachedConnection;
+} else {
+  isDbConnected = true; // Connection was warm
+}
 
 // --- MONGODB SCHEMAS & MODELS ---
 const AttachmentSchema = new mongoose.Schema({
@@ -740,4 +748,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// Export app for Vercel Serverless or run normally
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  startServer();
+}
