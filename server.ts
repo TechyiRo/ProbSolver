@@ -1,6 +1,5 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import compression from 'compression';
@@ -16,12 +15,6 @@ app.use(compression({ level: 6, threshold: 1024 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// ── Static images with long-term caching ─────────────────────────────────────
-app.use('/image', express.static(path.join(process.cwd(), 'image'), {
-  maxAge: '7d',
-  etag: true,
-  lastModified: true
-}));
 // State & Fallbacks for Offline/Sandbox state
 let isDbConnected = false;
 let dbConnectionStringUsed = "";
@@ -716,6 +709,7 @@ app.delete('/api/notifications', async (req, res) => {
 // --- VITE MIDDLEWARE ENROLLMENT ---
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
