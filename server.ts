@@ -31,27 +31,38 @@ dbConnectionStringUsed = MONGODB_URI.replace(/:([^@]+)@/, ":******@"); // Obfusc
 // For Vercel Serverless: cache the connection across warm boots
 let cachedConnection = (global as any).mongooseConnection;
 
-if (!cachedConnection) {
-  cachedConnection = mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,   // fail fast if Atlas is unreachable
-    socketTimeoutMS: 30000,           // don't hold sockets open too long
-    maxPoolSize: 10,                  // max concurrent connections in pool
-    minPoolSize: 2,                   // keep 2 connections warm to avoid cold connects
-    heartbeatFrequencyMS: 10000,      // check connection health every 10s
-  } as any)
-    .then(() => {
-      console.log("Successfully established secure connection tunnel with MongoDB cluster");
-      isDbConnected = true;
-    })
-    .catch((err: any) => {
-      console.error("MongoDB Cluster Connection warning:", err);
-      dbErrorMessage = err.message || String(err);
-    });
+async function connectToDatabase() {
+  if (isDbConnected) return;
+
+  if (!cachedConnection) {
+    cachedConnection = mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,   // fail fast if Atlas is unreachable
+      socketTimeoutMS: 30000,           // don't hold sockets open too long
+      maxPoolSize: 10,                  // max concurrent connections in pool
+      minPoolSize: 2,                   // keep 2 connections warm to avoid cold connects
+      heartbeatFrequencyMS: 10000,      // check connection health every 10s
+    } as any)
+      .then(() => {
+        console.log("Successfully established secure connection tunnel with MongoDB cluster");
+        isDbConnected = true;
+      })
+      .catch((err: any) => {
+        console.error("MongoDB Cluster Connection warning:", err);
+        dbErrorMessage = err.message || String(err);
+      });
+    
+    (global as any).mongooseConnection = cachedConnection;
+  }
   
-  (global as any).mongooseConnection = cachedConnection;
-} else {
-  isDbConnected = true; // Connection was warm
+  await cachedConnection;
+  if (!dbErrorMessage) isDbConnected = true;
 }
+
+// ── Strict DB Connection Barrier for API Routes ─────────────────────────────
+app.use('/api', async (req, res, next) => {
+  await connectToDatabase();
+  next();
+});
 
 // --- MONGODB SCHEMAS & MODELS ---
 const AttachmentSchema = new mongoose.Schema({
