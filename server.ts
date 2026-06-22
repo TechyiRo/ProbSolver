@@ -3,14 +3,25 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import compression from 'compression';
 
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+
+// ── Performance: gzip all responses ─────────────────────────────────────────
+app.use(compression({ level: 6, threshold: 1024 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use('/image', express.static(path.join(process.cwd(), 'image')));
+
+// ── Static images with long-term caching ─────────────────────────────────────
+app.use('/image', express.static(path.join(process.cwd(), 'image'), {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true
+}));
 // State & Fallbacks for Offline/Sandbox state
 let isDbConnected = false;
 let dbConnectionStringUsed = "";
@@ -25,11 +36,16 @@ MONGODB_URI = MONGODB_URI.trim().replace(/^['"]|['"]$/g, '');
 dbConnectionStringUsed = MONGODB_URI.replace(/:([^@]+)@/, ":******@"); // Obfuscate password in UI/logs
 
 // Connect asynchronously to prevent blocking server launch or causing timeouts
-mongoose.connect(MONGODB_URI)
+mongoose.connect(MONGODB_URI, {
+  serverSelectionTimeoutMS: 5000,   // fail fast if Atlas is unreachable
+  socketTimeoutMS: 30000,           // don't hold sockets open too long
+  maxPoolSize: 10,                  // max concurrent connections in pool
+  minPoolSize: 2,                   // keep 2 connections warm to avoid cold connects
+  heartbeatFrequencyMS: 10000,      // check connection health every 10s
+} as any)
   .then(() => {
     console.log("Successfully established secure connection tunnel with MongoDB cluster");
     isDbConnected = true;
-    // seedDatabaseIfNeeded(); // Disabled to allow a clean slate as requested by the user
   })
   .catch((err: any) => {
     console.error("MongoDB Cluster Connection warning:", err);
@@ -57,7 +73,7 @@ const TicketSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
-  category: { type: String, required: true, enum: ['Network', 'Access', 'Hardware', 'Software'] },
+  category: { type: String, required: true },
   priority: { type: String, required: true, enum: ['low', 'medium', 'high', 'critical'] },
   status: { type: String, required: true, enum: ['open', 'in_progress', 'pending', 'resolved', 'closed'] },
   clientName: { type: String, required: true },
@@ -148,6 +164,12 @@ async function seedDatabaseIfNeeded() {
 })();
 
 // --- API ENDPOINTS ---
+
+// ── Keep-alive ping — prevents Render free-tier spin-down ───────────────────
+app.get('/api/ping', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok: true, ts: Date.now() });
+});
 
 // Server health check & active connection tunnel monitoring telemetry
 app.get('/api/db-status', (req, res) => {
@@ -694,8 +716,20 @@ async function startServer() {
     console.log("Vite interactive dev middleware bound to router cascade");
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    // ── Production static assets with aggressive caching ──────────────────
+    app.use(express.static(distPath, {
+      maxAge: '1y',          // JS/CSS fingerprinted by Vite — cache 1 year
+      etag: true,
+      lastModified: true,
+      setHeaders: (res, filePath) => {
+        // HTML must NOT be cached — always fresh
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      }
+    }));
+    app.get('*', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
     console.log("Production static server route index active");

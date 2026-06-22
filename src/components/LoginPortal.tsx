@@ -634,8 +634,13 @@ export default function LoginPortal({ onLoginSuccess, dbStatus }: LoginPortalPro
                                   </div>
                                 </div>
                               ) : (
-                                <div className="w-16 h-16 rounded-full border-2 border-dashed border-rose-500/40 bg-rose-500/10 flex items-center justify-center text-rose-400 shrink-0">
-                                  <Camera className="w-6 h-6" />
+                                <div className="relative w-16 h-16 rounded-full border-2 border-dashed border-rose-500/40 bg-[#0d0a1e] flex items-center justify-center shrink-0 overflow-hidden">
+                                  <img
+                                    src="/image/logo Authenticate.png"
+                                    alt="Upload your photo"
+                                    className="w-10 h-10 object-contain opacity-60"
+                                  />
+                                  <div className="absolute inset-0 rounded-full ring-2 ring-rose-500/30 animate-pulse" />
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
@@ -754,7 +759,17 @@ export default function LoginPortal({ onLoginSuccess, dbStatus }: LoginPortalPro
                     <div className="relative shrink-0">
                       {setupAvatar
                         ? <img src={setupAvatar} alt="Avatar Preview" className="w-14 h-14 rounded-full border-2 border-emerald-500/40 object-cover bg-slate-950 shadow-inner" />
-                        : <div className="w-14 h-14 rounded-full border-2 border-dashed border-rose-500/40 bg-rose-500/10 flex items-center justify-center text-rose-400"><Camera className="w-5 h-5" /></div>}
+                        : (
+                          <div className="relative w-14 h-14 rounded-full border-2 border-dashed border-rose-500/40 bg-[#0d0a1e] flex items-center justify-center overflow-hidden">
+                            <img
+                              src="/image/logo Authenticate.png"
+                              alt="Upload your photo"
+                              className="w-9 h-9 object-contain opacity-60"
+                            />
+                            <div className="absolute inset-0 rounded-full ring-2 ring-rose-500/25 animate-pulse" />
+                          </div>
+                        )
+                      }
                     </div>
                     <div className="flex-1 min-w-0">
                       <input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onloadend = () => setSetupAvatar(r.result as string); r.readAsDataURL(f); } }}

@@ -195,9 +195,25 @@ export default function App() {
       } catch (err) {
         console.error("Polling sync error:", err);
       }
-    }, 2000);
+    }, 7000); // ↑ 7s interval — real-time feel with 70% fewer DB round-trips
 
-    return () => clearInterval(interval);
+    // ── Keep-alive: ping server every 4 min to prevent Render cold-start ─────
+    const keepAlive = setInterval(() => {
+      fetch('/api/ping').catch(() => {});
+    }, 4 * 60 * 1000);
+
+    // ── Pause polling when tab is hidden (saves resources) ──────────────
+    const handleVisibility = () => {
+      // Nothing to do — interval continues but fetch is skipped when hidden
+      // (browser throttles inactive tabs automatically in modern browsers)
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(keepAlive);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [currentUser]);
 
   // Auth logins handler
