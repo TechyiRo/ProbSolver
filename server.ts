@@ -742,9 +742,10 @@ async function startServer() {
   });
 }
 
-// Export app for Vercel Serverless or run normally
-if (process.env.VERCEL) {
-  module.exports = app;
-} else {
+// Run full local server if not on Vercel
+if (!process.env.VERCEL) {
   startServer();
 }
+
+// Export app for Vercel Serverless
+export default app;
